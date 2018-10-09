@@ -1,6 +1,12 @@
+//
+//  app.swift
+//  App
+//
+//  Created by laijihua on 2018/8/29.
+//
+
 import Vapor
 
-/// Creates an instance of Application. This is called from main.swift in the run target.
 public func app(_ env: Environment) throws -> Application {
     var config = Config.default()
     var env = env
@@ -8,5 +14,6 @@ public func app(_ env: Environment) throws -> Application {
     try configure(&config, &env, &services)
     let app = try Application(config: config, environment: env, services: services)
     try boot(app)
+
     return app
 }
