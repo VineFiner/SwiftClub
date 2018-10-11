@@ -16,7 +16,7 @@ public func databases(config: inout DatabasesConfig, services: inout Services) t
 
     let psqlConfig = PostgreSQLDatabaseConfig(hostname: "localhost",
                                               port: 5432,
-                                              username: "root",
+                                              username: "dbuser",
                                               database: "club",
                                               password: "lai12345")
     config.add(database: PostgreSQLDatabase(config: psqlConfig), as: .psql)

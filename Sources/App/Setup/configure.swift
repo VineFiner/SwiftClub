@@ -14,7 +14,7 @@ public func configure(
     services.register(router, as: Router.self)
 
     let serverConfig = NIOServerConfig.default(hostname: "0.0.0.0",
-                                               port: 8988)
+                                               port: 8977)
     services.register(serverConfig)
 
     /// 配置全局的 middleware
