@@ -112,7 +112,7 @@ public final class APIErrorMiddleware: Middleware, Service, ServiceType {
                 // convertred to `CustomStringConvertible` on macOS, but not
                 // on Linux.
                 #if !os(macOS)
-                if let error = error as? CustomStringConvertible {
+                if let error = error as CustomStringConvertible {
                     result = ErrorResult(message: error.description, status: nil)
                 } else {
                     result = ErrorResult(message: "Unknown error.", status: nil)
