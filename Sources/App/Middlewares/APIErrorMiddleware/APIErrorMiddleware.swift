@@ -111,15 +111,7 @@ public final class APIErrorMiddleware: Middleware, Service, ServiceType {
                 // We use a compiler OS check because `Error` can be directly
                 // convertred to `CustomStringConvertible` on macOS, but not
                 // on Linux.
-                #if !os(macOS)
-                if let error = error as CustomStringConvertible {
-                    result = ErrorResult(message: error.description, status: nil)
-                } else {
-                    result = ErrorResult(message: "Unknown error.", status: nil)
-                }
-                #else
                 result = ErrorResult(message: (error as CustomStringConvertible).description, status: nil)
-                #endif
                 status = result.status?.code
             }
         }
