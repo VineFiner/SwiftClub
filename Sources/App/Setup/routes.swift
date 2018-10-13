@@ -4,6 +4,7 @@ import Vapor
 
 public func routes(_ router: Router) throws {
 
+    // / 用于静态文件
     router.get("welcome") { req in
         return "welcome"
     }
