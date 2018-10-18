@@ -20,4 +20,5 @@ public func databases(config: inout DatabasesConfig, services: inout Services) t
                                               database: "club",
                                               password: "lai12345")
     config.add(database: PostgreSQLDatabase(config: psqlConfig), as: .psql)
+    config.enableLogging(on: .psql)
 }

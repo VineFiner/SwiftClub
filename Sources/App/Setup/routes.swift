@@ -30,4 +30,8 @@ public func routes(_ router: Router) throws {
 
     let newsRouteController = NewsRouteController()
     try router.register(collection: newsRouteController)
+
+    let topicRouteController = TopicRouteController()
+    try router.register(collection: topicRouteController)
 }
+
