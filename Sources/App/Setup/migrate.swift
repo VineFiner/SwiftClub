@@ -31,8 +31,11 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: UserAuth.self, database: .psql)
     migrations.add(model: Subject.self, database: .psql)
     migrations.add(model: Topic.self, database: .psql)
-    // Populate
+    // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
     migrations.add(migration: PopulateMenuForms.self, database: .psql)
     migrations.add(migration: PopulateSubjectForms.self, database: .psql)
+
+    // 添加字段
+    migrations.add(migration: SubjectAddIcon.self, database: .psql)
 }
