@@ -44,6 +44,7 @@ extension Topic {
 }
 
 extension Topic: Paginatable {}
+extension Topic: Parameter {}
 
 extension Topic: Migration {}
 extension Topic: PostgreSQLModel {}

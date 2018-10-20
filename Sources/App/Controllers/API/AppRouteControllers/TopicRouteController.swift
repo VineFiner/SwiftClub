@@ -17,8 +17,9 @@ final class TopicRouteController: RouteCollection {
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
-        group.get("subjects", use: subjectsList) //
-        group.get("list", use: topicList)
+        group.get("subjects", use: subjectsList) // 获取板块
+        group.get("list", use: topicList) // 获取话题列表
+        group.get(Topic.parameter, use: topicFetch) // topic 详情
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
     }
 }
@@ -26,6 +27,10 @@ final class TopicRouteController: RouteCollection {
 extension TopicRouteController {
     func subjectsList(request: Request) throws -> Future<Response> {
         return try Subject.query(on: request).all().makeJson(on: request)
+    }
+
+    func topicFetch(request: Request) throws -> Future<Response> {
+         return try request.parameters.next(Topic.self).makeJson(on:request)
     }
 
     func topicList(request: Request) throws -> Future<Response> {
