@@ -41,6 +41,11 @@ extension Topic {
     var subject: Parent<Topic, Subject> {
         return parent(\.subjectId)
     }
+    // 评论
+    var comments: Children<Topic, Comment> {
+        return children(\Comment.id)
+    }
+
 }
 
 extension Topic: Paginatable {}

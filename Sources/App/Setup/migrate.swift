@@ -31,6 +31,9 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: UserAuth.self, database: .psql)
     migrations.add(model: Subject.self, database: .psql)
     migrations.add(model: Topic.self, database: .psql)
+    migrations.add(model: Comment.self, database: .psql)
+    migrations.add(model: Replay.self, database: .psql)
+
     // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
     migrations.add(migration: PopulateMenuForms.self, database: .psql)
