@@ -20,10 +20,11 @@ final class TopicRouteController: RouteCollection {
         group.get("subjects", use: subjectsList) // 获取板块
         group.get("list", use: topicList) // 获取话题列表
         group.get(Topic.parameter, use: topicFetch) // topic 详情
-        group.get(Topic.parameter,"comments", use: topicComments)
+        group.get(Topic.parameter, "comments", use: topicComments)
 
+        tokenAuthGroup.post(Comment.self, at:"comment", use: topicAddComment)
+        tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
-
     }
 }
 
@@ -41,15 +42,26 @@ extension Array {
 }
 
 extension TopicRouteController {
-    // 话题的评论数据
+
+    // 添加评论回复
+    func commentAddReplay(request: Request, replay: Replay) throws  -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try replay.create(on: request).makeJson(on: request)
+    }
+
+    // 添加评论
+    func topicAddComment(request: Request, comment: Comment) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try comment.create(on: request).makeJson(on: request)
+    }
+
+    // 获取话题的评论数据
     func topicComments(request: Request) throws -> Future<Response> {
-
         let response = try request.parameters.next(Topic.self).flatMap(to: [TopicCommentContainer].self) { topic in
-
             let topicId = try topic.requireID()
             let tuples = Comment.query(on: request)
                 .filter(\Comment.topicId == topicId)   // 刷选出这个评论
-                .join(\Replay.commentId, to: \Comment.id)  // 
+                .join(\Replay.commentId, to: \Comment.id)  //
                 .alsoDecode(Replay.self)
                 .all()
             let result = tuples.map { self.handleTupleComment(tuples: $0)}
@@ -61,7 +73,6 @@ extension TopicRouteController {
 
 
     func handleTupleComment(tuples: [(Comment, Replay)]) -> [TopicCommentContainer] {
-
         let items = tuples.map { tuple in
             return TopicCommentContainer(comment: tuple.0, replays: [tuple.1])
         }
@@ -76,26 +87,6 @@ extension TopicRouteController {
         }
         return comms
     }
-
-
-//    func topicComments2(request: Request) throws -> Future<Response> {
-//        return try request.parameters.next(Topic.self).flatMap { topic in
-//            return try topic
-//                .comments
-//                .query(on: request)
-//                .all()
-//                .flatMap(to: [TopicCommentContainer].self) { coms in   //topic 下有 replays
-//                    return coms.map { com in
-//                        return try? com.replays.query(on: request).all().map(to: TopicCommentContainer.self, { replays  in
-//                            // {"topic": {}, "replays": [{}, {}]}
-//                            return TopicCommentContainer(comment: com, replays: replays)
-//                        })
-//                    }
-//            }
-//            }.makeJson(request:request)
-//
-//        //         [{"topic": {}, "replays": [{}, {}]},{"topic": {}, "replays": [{}, {}]}]
-//    }
 
     func subjectsList(request: Request) throws -> Future<Response> {
         return try Subject.query(on: request).all().makeJson(on: request)
