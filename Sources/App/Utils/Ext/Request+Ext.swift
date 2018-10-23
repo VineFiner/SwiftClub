@@ -35,6 +35,7 @@ extension Request {
         return start..<end
     }
 
+    /// 包装 join 的分页数据
     func paginated<M: Content>(data:[M], total: Int) -> Paginated<M> {
         let size = self.per
         let number = self.page

@@ -59,20 +59,27 @@ extension TopicRouteController {
 
     // 获取话题的评论数据
     func topicComments(request: Request) throws -> Future<Response> {
-        let response = try request.parameters.next(Topic.self).flatMap(to: [TopicCommentContainer].self) { topic in
+        let response = try request.parameters.next(Topic.self).flatMap(to: Paginated<TopicCommentContainer>.self) { topic in
             let topicId = try topic.requireID()
-            let tuples = Comment.query(on: request)
-                .filter(\Comment.topicId == topicId)   // 刷选出这个评论
-                .join(\Replay.commentId, to: \Comment.id)  //
+            let result = Comment
+                .query(on: request)
+                .range(request.pageRange)
+                .join(\Replay.commentId, to: \Comment.id, method: .left)  //
+                .filter(\Comment.topicId == topicId)  // 刷选出这个评论
                 .alsoDecode(Replay.self)
                 .all()
-            let result = tuples.map { self.handleTupleComment(tuples: $0)}
+                .map { self.handleTupleComment(tuples: $0) }
+                .flatMap{ results in
+                    return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
+                        return request.paginated(data: results, total: count)
+                    }
+                }
             return result
         }
         return try response.makeJson(on:request)
     }
 
-
+    /// 数据组装
     func handleTupleComment(tuples: [(Comment, Replay)]) -> [TopicCommentContainer] {
         let items = tuples.map { tuple in
             return TopicCommentContainer(comment: tuple.0, replays: [tuple.1])
