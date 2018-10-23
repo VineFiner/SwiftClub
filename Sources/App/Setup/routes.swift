@@ -13,6 +13,10 @@ public func routes(_ router: Router) throws {
         return try EmailSender.sendEmail(request, content: .accountActive(emailTo: "1164258202@qq.com", url: "https://baidu.com")).transform(to: HTTPStatus.ok)
     }
 
+    router.get("user") { request in
+        return try User.query(on: request).paginate(for: request).map{$0.response()}.makeJson(on: request)
+    }
+
     let authRouteController = AuthenticationRouteController()
     try router.register(collection: authRouteController)
 

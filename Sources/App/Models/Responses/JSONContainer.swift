@@ -102,12 +102,6 @@ extension Future where T == Void {
     }
 }
 
-extension Future where T == Either<Content, Content> {
-    func makeJson(on request: Request) throws -> Future<Response>  {
-        return try self.makeJson(on: request)
-    }
-}
-
 extension Request {
     func makeJson<T: Content>(_ content: T) throws -> Future<Response> {
         return try JSONContainer<T>(data: content).encode(for: self)

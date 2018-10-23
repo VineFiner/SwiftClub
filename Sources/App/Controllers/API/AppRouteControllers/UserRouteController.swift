@@ -135,7 +135,7 @@ private extension UserRouteController {
                 let activeCode = ActiveCode(userId: existAuth.userId, code: codeStr, type: .changePwd)
                 return try activeCode
                     .create(on: request)
-                    .flatMap {acode in
+                    .flatMap { acode in
                         let content = EmailSender.Content.changePwd(emailTo: container.email, code: codeStr)
                         return try self.sendMail(request: request, content: content)
                     }.makeJson(request: request)

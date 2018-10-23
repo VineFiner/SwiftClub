@@ -9,6 +9,8 @@ import Foundation
 import Vapor
 import Fluent
 import FluentPostgreSQL
+import Pagination
+
 
 final class TopicRouteController: RouteCollection {
     func boot(router: Router) throws {
@@ -67,7 +69,6 @@ extension TopicRouteController {
             let result = tuples.map { self.handleTupleComment(tuples: $0)}
             return result
         }
-
         return try response.makeJson(on:request)
     }
 
@@ -93,14 +94,32 @@ extension TopicRouteController {
     }
 
     func topicFetch(request: Request) throws -> Future<Response> {
-         return try request.parameters.next(Topic.self).makeJson(on:request)
+        return try request.parameters.next(Topic.self).flatMap(to: TopicContainer.self) { topic in
+            return topic
+                .creator
+                .query(on: request)
+                .first()
+                .unwrap(or: ApiError(code: .modelNotExist))
+                .map(to: TopicContainer.self) { user in
+                return TopicContainer(topic: topic, user: user)
+            }
+        }.makeJson(on:request)
     }
 
     func topicList(request: Request) throws -> Future<Response> {
         return try Topic
             .query(on: request)
-            .paginate(for: request)
-            .map{$0.response()}
+            .range(request.pageRange) // 获取分页数据
+            .join(\User.id, to: \Topic.userId)
+            .alsoDecode(User.self)
+            .all()
+            .map { tuples in
+                return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
+            }.flatMap{ results in
+                return Topic.query(on: request).count().map(to: Paginated<TopicContainer>.self) { count in
+                    return request.paginated(data: results, total: count)
+                }
+            }
             .makeJson(on:request)
     }
 

@@ -40,6 +40,6 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(migration: PopulateMenuForms.self, database: .psql)
     migrations.add(migration: PopulateSubjectForms.self, database: .psql)
 
-    // 添加字段
-    migrations.add(migration: SubjectAddIcon.self, database: .psql)
+    // 添加字段, 如果你是最新的项目，那么下面的进行注释
+    //migrations.add(migration: SubjectAddIcon.self, database: .psql)
 }
