@@ -61,23 +61,52 @@ extension TopicRouteController {
     func topicComments(request: Request) throws -> Future<Response> {
         let response = try request.parameters.next(Topic.self).flatMap(to: Paginated<TopicCommentContainer>.self) { topic in
             let topicId = try topic.requireID()
-            let result = Comment
-                .query(on: request)
-                .range(request.pageRange)
-                .join(\Replay.commentId, to: \Comment.id, method: .left)  //
-                .filter(\Comment.topicId == topicId)  // 刷选出这个评论
-                .alsoDecode(Replay.self)
-                .all()
-                .map { self.handleTupleComment(tuples: $0) }
-                .flatMap{ results in
-                    return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
-                        return request.paginated(data: results, total: count)
-                    }
+            let comments = Comment.query(on: request).filter(\Comment.topicId == topicId).range(request.pageRange).all()
+
+            let res = comments.flatMap(to: [TopicCommentContainer].self, { comments  in
+                let replysFutures = comments.map { comment in
+                    return Replay.query(on: request).filter(\Replay.commentId == comment.id!).all().and(result: comment).map({ tuples in
+                        return TopicCommentContainer(comment: tuples.1, replays: tuples.0)
+                    })
                 }
+                return replysFutures.flatten(on: request)
+            })
+
+//            let res = comments.flatMap { comments in
+//                let replaysFutures = comments.map { comment in
+//                        return Replay.query(on: request).filter(\Replay.commentId == comment.id!).all().and(result: comment)
+//                    }.flatten(on: request)
+//                let tmp = replaysFutures.flatMap { items in
+//                    return items.compactMap{ return TopicCommentContainer(comment: $0.1, replays: $0.0)}
+//                }
+//
+//
+//            }
+
+            let result = res.flatMap { results in
+                return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
+                    return request.paginated(data: results, total: count)
+                }
+            }
+
             return result
         }
         return try response.makeJson(on:request)
     }
+
+    //            let result2 = Comment
+    //                .query(on: request)
+    //                .range(request.pageRange)
+    //                .join(\Replay.commentId, to: \Comment.id, method: .left)  //
+    //                .filter(\Comment.topicId == topicId)  // 刷选出这个评论
+    //                .alsoDecode(Replay.self)
+    //                .all()
+    //                .map { self.handleTupleComment(tuples: $0) }
+    //                .flatMap{ results in
+    //                    return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
+    //                        return request.paginated(data: results, total: count)
+    //                    }
+    //                }
 
     /// 数据组装
     func handleTupleComment(tuples: [(Comment, Replay)]) -> [TopicCommentContainer] {
