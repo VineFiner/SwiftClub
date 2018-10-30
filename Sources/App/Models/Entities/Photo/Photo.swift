@@ -7,6 +7,7 @@
 
 import Vapor
 import FluentPostgreSQL
+import Pagination
 
 /// 图片模块图片
 struct Photo: Content {
@@ -21,6 +22,8 @@ struct Photo: Content {
     var userName: String
     var userAvator: String?
     var ratio: Double   // 宽/高
+    var commentNum: Int // 评论数
+    var likeNum: Int  // 点赞数
 
     var createdAt: Date?
     var updatedAt: Date?
@@ -30,8 +33,18 @@ struct Photo: Content {
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
 }
 
-extension Photo: Parameter {}
+extension Photo {
+    var comments: Children<Photo, PhotoComment> {
+        return children(\PhotoComment.photoId)
+    }
 
+    var collectors: Siblings<Photo, User, PhotoCollection> {
+        return siblings()
+    }
+}
+
+extension Photo: Parameter {}
+extension Photo: Paginatable {}
 extension Photo: Migration {}
 extension Photo: PostgreSQLModel {}
 

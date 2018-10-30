@@ -64,6 +64,14 @@ extension User {
     var organization: Parent<User, Organization> { // 组织
         return parent(\.organizId)
     }
+
+    var photos: Children<User, Photo> {
+        return children(\.userId)
+    }
+
+    var collectPhotos: Siblings<User, Photo, PhotoCollection> {
+        return siblings()
+    }
 }
 
 extension User: Paginatable {}

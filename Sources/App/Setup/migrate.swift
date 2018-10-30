@@ -40,6 +40,7 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: PhotoCategory.self, database: .psql)
     migrations.add(model: Photo.self, database: .psql)
     migrations.add(model: PhotoComment.self, database: .psql)
+    migrations.add(model: PhotoCollection.self, database: .psql)
 
     // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)

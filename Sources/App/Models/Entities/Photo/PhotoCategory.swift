@@ -26,6 +26,11 @@ struct PhotoCategory: Content {
     }
 }
 
+extension PhotoCategory {
+    var photos: Children<PhotoCategory, Photo> {
+        return children(\Photo.cateId)
+    }
+}
 
 extension PhotoCategory: Migration {}
 extension PhotoCategory: PostgreSQLModel {}

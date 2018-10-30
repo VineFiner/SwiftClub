@@ -22,41 +22,74 @@ final class PhotoRouteController: RouteCollection {
         /// 获取图片
         group.get(Photo.parameter, use: fetchPhoto)
         /// 获取评论
-        group.get("comments", use: fetchComments)
+        group.get(Photo.parameter,"comments", use: fetchComments)
         /// 获取分类
         group.get("cates", use: fetchPhotoCates)
-        /// 添加评论
-        tokenAuthGroup.post("comment", use: addComment)
-        /// 收藏
-        tokenAuthGroup.post("collection", use: collectionPhoto)
+
         /// 搜索
         group.get("search", use: searchPhoto)
+        /// 添加评论
+        tokenAuthGroup.post(PhotoComment.self, at: "comment", use: addComment)
+        /// 收藏
+        tokenAuthGroup.post(Photo.parameter, at: "collecte", use: collectePhoto)
+        tokenAuthGroup.post(Photo.parameter, at: "uncollect", use: uncollectePhoto)
     }
 }
 
 extension PhotoRouteController {
+    /// 获取图片列表
     func listPhotos(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        return try Photo
+            .query(on: request)
+            .paginate(for: request)
+            .map { $0.response()}
+            .makeJson(on: request)
     }
 
+    /// 获取图片详情
     func fetchPhoto(_ request: Request) throws  -> Future<Response> {
-        return try request.makeJson()
+        return try request.parameters.next(Photo.self).makeJson(on: request)
     }
 
+    /// 获取图片评论
     func fetchComments(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        return try request
+            .parameters
+            .next(Photo.self)
+            .flatMap(to: Page<PhotoComment>.self, { photo in
+                return try photo
+                    .comments
+                    .query(on: request)
+                    .paginate(for: request)
+            })
+            .map{ $0.response()}
+            .makeJson(on: request)
     }
 
-    func addComment(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+    /// 添加评论
+    func addComment(_ request: Request, comment: PhotoComment) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        return try comment.save(on: request).makeJson(on: request).always {
+            _ = Photo.query(on: request)
+                .first()
+                .unwrap(or: ApiError(code: .modelNotExist))
+                .flatMap (to: Void.self){ photo in
+                    var tmpPhoto = photo
+                    tmpPhoto.commentNum += 1
+                    return tmpPhoto.save(on: request).map(to: Void.self, {_ in })
+                }
+        }
     }
 
-    func collectionPhoto(_ request: Request) throws -> Future<Response> {
+    func collectionPhoto(_ request: Request, photo: Photo) throws -> Future<Response> {
          return try request.makeJson()
+    }
+    func unCollectionPhoto(_ request: Request, photo: Photo) throws -> Future<Response> {
+
     }
 
     func fetchPhotoCates(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        return try PhotoCategory.query(on: request).all().makeJson(on: request)
     }
 
     func searchPhoto(_ request: Request) throws -> Future<Response> {
