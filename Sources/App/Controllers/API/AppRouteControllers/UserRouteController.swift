@@ -213,7 +213,7 @@ private extension UserRouteController {
                 try userAuth.validate()
                 let newUser = User(name: container.name,
                                    email: container.email,
-                                   organizId: container.organizId)
+                                   organizId: container.organizId ?? 1)
                 return newUser
                     .create(on: request)
                     .flatMap { user in

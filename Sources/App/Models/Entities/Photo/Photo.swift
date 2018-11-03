@@ -31,6 +31,21 @@ struct Photo: Content {
     static var createdAtKey: TimestampKey? { return \.createdAt }
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
+
+    init(user: User, cate: PhotoCategory, container: PhotoAddContainer) {
+        self.url = container.url
+        self.title = container.title
+        self.intro = container.intro
+        self.tags = container.tags ?? ""
+        self.cateId = container.cateId
+        self.cateName = cate.name
+        self.userId = container.userId
+        self.userName = user.name
+        self.userAvator = user.avator
+        self.ratio = container.ratio
+        self.commentNum = 0
+        self.likeNum = 0
+    }
 }
 
 extension Photo {

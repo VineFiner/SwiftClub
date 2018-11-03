@@ -26,17 +26,34 @@ final class PhotoRouteController: RouteCollection {
         /// 获取分类
         group.get("cates", use: fetchPhotoCates)
 
+        /// 添加
+        group.post(PhotoAddContainer.self, at:"/", use: addPhoto)
+
         /// 搜索
         group.get("search", use: searchPhoto)
         /// 添加评论
         tokenAuthGroup.post(PhotoComment.self, at: "comment", use: addComment)
         /// 收藏
-        tokenAuthGroup.post(Photo.parameter, at: "collecte", use: collectePhoto)
-        tokenAuthGroup.post(Photo.parameter, at: "uncollect", use: uncollectePhoto)
+        tokenAuthGroup.post(Photo.parameter, "collecte", use: collectePhoto)
+        tokenAuthGroup.post(Photo.parameter, "uncollect", use: unCollectePhoto)
     }
 }
 
 extension PhotoRouteController {
+
+    /// 添加图片接口 
+    func addPhoto(_ reqeust: Request, container: PhotoAddContainer) throws -> Future<Response> {
+        let _ = try reqeust.authenticated(User.self)
+        let result = flatMap(to: Photo.self, User.find(container.userId, on: reqeust), PhotoCategory.find(container.cateId, on: reqeust)) { (user, category) in
+            guard let user = user , let cate = category else {
+                throw ApiError(code: ApiError.Code.modelNotExist)
+            }
+            let photo = Photo(user: user, cate: cate, container: container)
+            return photo.save(on: reqeust)
+        }
+        return try result.makeJson(on: reqeust)
+    }
+
     /// 获取图片列表
     func listPhotos(_ request: Request) throws -> Future<Response> {
         return try Photo
@@ -81,11 +98,11 @@ extension PhotoRouteController {
         }
     }
 
-    func collectionPhoto(_ request: Request, photo: Photo) throws -> Future<Response> {
+    func collectePhoto(_ request: Request) throws -> Future<Response> {
          return try request.makeJson()
     }
-    func unCollectionPhoto(_ request: Request, photo: Photo) throws -> Future<Response> {
-
+    func unCollectePhoto(_ request: Request) throws -> Future<Response> {
+        return try request.makeJson()
     }
 
     func fetchPhotoCates(_ request: Request) throws -> Future<Response> {
