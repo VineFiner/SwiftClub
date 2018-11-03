@@ -17,6 +17,9 @@ final class PhotoRouteController: RouteCollection {
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
+        /// 获取七牛token
+        group.get("token", use: fetchQiniuToken)
+
         /// 获取列表
         group.get("/", use: listPhotos)
         /// 获取图片
@@ -41,7 +44,13 @@ final class PhotoRouteController: RouteCollection {
 
 extension PhotoRouteController {
 
-    /// 添加图片接口 
+    /// 获取七牛 token
+    func fetchQiniuToken(_ request: Request) throws -> Future<Response> {
+        let token = try QiniuService.token()
+        return try request.makeJson(token)
+    }
+
+    /// 添加图片接口
     func addPhoto(_ reqeust: Request, container: PhotoAddContainer) throws -> Future<Response> {
         let _ = try reqeust.authenticated(User.self)
         let result = flatMap(to: Photo.self, User.find(container.userId, on: reqeust), PhotoCategory.find(container.cateId, on: reqeust)) { (user, category) in
