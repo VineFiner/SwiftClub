@@ -65,11 +65,28 @@ extension PhotoRouteController {
 
     /// 获取图片列表
     func listPhotos(_ request: Request) throws -> Future<Response> {
-        return try Photo
-            .query(on: request)
-            .paginate(for: request)
-            .map { $0.response()}
-            .makeJson(on: request)
+
+        if let type = try request.query.get(Int?.self, at: "type") {
+            if type == 1 { // hot
+                return try Photo
+                    .query(on: request)
+                    .paginate(for: request, [PostgreSQLOrderBy.orderBy(PostgreSQLExpression.column(\Photo.likeNum), PostgreSQLDirection.descending)])
+                    .map { $0.response()}
+                    .makeJson(on: request)
+            } else { // newer
+                return try Photo
+                    .query(on: request)
+                    .paginate(for: request)
+                    .map { $0.response()}
+                    .makeJson(on: request)
+            }
+        } else {
+            return try Photo
+                .query(on: request)
+                .paginate(for: request)
+                .map { $0.response()}
+                .makeJson(on: request)
+        }
     }
 
     /// 获取图片详情
