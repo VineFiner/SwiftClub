@@ -32,7 +32,7 @@ final class QiniuService {
 
     private func HMACSHA1(_ key: String, text: String) throws -> String {
         let hmac = try HMAC.SHA1.authenticate(text, key: key)
-        let hmacData = hmac.hexEncodedData()
+        let hmacData = hmac.convertToData()
         return urlSafeBase64Encode(hmacData)
     }
 
