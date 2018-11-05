@@ -75,7 +75,7 @@ extension User {
 }
 
 extension User: Paginatable {}
-
+extension User: Parameter {}
 
 //MARK: TOkenAuthenticatable
 extension User: TokenAuthenticatable {

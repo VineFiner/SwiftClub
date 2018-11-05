@@ -19,7 +19,6 @@ final class PhotoRouteController: RouteCollection {
 
         /// 获取七牛token
         group.get("token", use: fetchQiniuToken)
-
         /// 获取列表
         group.get("/", use: listPhotos)
         /// 获取图片
@@ -28,21 +27,28 @@ final class PhotoRouteController: RouteCollection {
         group.get(Photo.parameter,"comments", use: fetchComments)
         /// 获取分类
         group.get("cates", use: fetchPhotoCates)
-
+        /// 获取我的评论
+        group.get(User.parameter, "comments", use: fetchMineComments)
+        /// 获取我的收藏
+        group.get(User.parameter, "collectes", use: fetchMineCollects)
+        /// 我的创作
+        group.get(User.parameter, "create", use: fetchMinePhotos)
         /// 添加
         group.post(PhotoAddContainer.self, at:"/", use: addPhoto)
-
         /// 搜索
         group.get("search", use: searchPhoto)
         /// 添加评论
         tokenAuthGroup.post(PhotoComment.self, at: "comment", use: addComment)
         /// 收藏
         tokenAuthGroup.post(Photo.parameter, "collecte", use: collectePhoto)
+        /// 取消收藏
         tokenAuthGroup.post(Photo.parameter, "uncollect", use: unCollectePhoto)
     }
 }
 
 extension PhotoRouteController {
+
+
 
     /// 获取七牛 token
     func fetchQiniuToken(_ request: Request) throws -> Future<Response> {
@@ -124,18 +130,35 @@ extension PhotoRouteController {
         }
     }
 
-    func collectePhoto(_ request: Request) throws -> Future<Response> {
-         return try request.makeJson()
-    }
-    func unCollectePhoto(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
-    }
-
     func fetchPhotoCates(_ request: Request) throws -> Future<Response> {
         return try PhotoCategory.query(on: request).all().makeJson(on: request)
     }
 
+    func collectePhoto(_ request: Request) throws -> Future<Response> {
+         return try request.makeJson()
+    }
+
+    func unCollectePhoto(_ request: Request) throws -> Future<Response> {
+        return try request.makeJson()
+    }
+
     func searchPhoto(_ request: Request) throws -> Future<Response> {
         return try request.makeJson()
+    }
+
+    func fetchMineCollects(_ request: Request) throws -> Future<Response> {
+        return try request.makeJson()
+    }
+
+    func fetchMineComments(_ request: Request) throws -> Future<Response> {
+        return try request.makeJson()
+    }
+
+    func fetchMinePhotos(_ request: Request) throws -> Future<Response> {
+        return try request
+            .parameters
+            .next(User.self)
+            .flatMap {return try $0.photos.query(on: request).all()}
+            .makeJson(on: request)
     }
 }
