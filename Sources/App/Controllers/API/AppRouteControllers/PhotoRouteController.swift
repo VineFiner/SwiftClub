@@ -24,7 +24,7 @@ final class PhotoRouteController: RouteCollection {
         /// 获取图片
         group.get(Photo.parameter, use: fetchPhoto)
         /// 获取评论
-        group.get(Photo.parameter,"comments", use: fetchComments)
+        group.get(Photo.parameter, "comments", use: fetchComments)
         /// 获取分类
         group.get("cates", use: fetchPhotoCates)
         /// 获取我的评论
@@ -155,6 +155,7 @@ extension PhotoRouteController {
     }
 
     func fetchMinePhotos(_ request: Request) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
         return try request
             .parameters
             .next(User.self)
