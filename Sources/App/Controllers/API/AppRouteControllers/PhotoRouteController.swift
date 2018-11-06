@@ -27,12 +27,15 @@ final class PhotoRouteController: RouteCollection {
         group.get(Photo.parameter, "comments", use: fetchComments)
         /// 获取分类
         group.get("cates", use: fetchPhotoCates)
+        /// 获取分类下的图片
+        group.get("cate", "photos", use: fetchCatePhotos)
+
         /// 获取我的评论
-        group.get(User.parameter, "comments", use: fetchMineComments)
+        group.get("comments", use: fetchMineComments)
         /// 获取我的收藏
-        group.get(User.parameter, "collectes", use: fetchMineCollects)
+        group.get("collectes", use: fetchMineCollects)
         /// 我的创作
-        group.get(User.parameter, "create", use: fetchMinePhotos)
+        group.get("create", use: fetchMinePhotos)
         /// 添加
         group.post(PhotoAddContainer.self, at:"/", use: addPhoto)
         /// 搜索
@@ -143,7 +146,12 @@ extension PhotoRouteController {
     }
 
     func searchPhoto(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        let searchKey = try request.query.get(String.self, at: "title")
+        return try Photo.query(on: request)
+            .filter(\Photo.title == searchKey)
+            .paginate(for: request)
+            .map { $0.response()}
+            .makeJson(on: request)
     }
 
     func fetchMineCollects(_ request: Request) throws -> Future<Response> {
@@ -156,10 +164,22 @@ extension PhotoRouteController {
 
     func fetchMinePhotos(_ request: Request) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
-        return try request
-            .parameters
-            .next(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try User
+            .find(userId, on: request)
+            .unwrap(or: ApiError(code: .modelNotExist))
             .flatMap {return try $0.photos.query(on: request).all()}
+            .makeJson(on: request)
+    }
+
+    func fetchCatePhotos(_ request: Request) throws -> Future<Response> {
+        let cateId = try request.query.get(Int.self, at: "cateId")
+        return try PhotoCategory
+            .find(cateId, on: request)
+            .unwrap(or: ApiError(code: .modelNotExist))
+            .flatMap {
+                return try $0.photos.query(on: request).paginate(for: request)
+            }.map{$0.response()}
             .makeJson(on: request)
     }
 }

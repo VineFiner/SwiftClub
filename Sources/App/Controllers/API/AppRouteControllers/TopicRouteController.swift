@@ -71,18 +71,6 @@ extension TopicRouteController {
                 }
                 return replysFutures.flatten(on: request)
             })
-
-//            let res = comments.flatMap { comments in
-//                let replaysFutures = comments.map { comment in
-//                        return Replay.query(on: request).filter(\Replay.commentId == comment.id!).all().and(result: comment)
-//                    }.flatten(on: request)
-//                let tmp = replaysFutures.flatMap { items in
-//                    return items.compactMap{ return TopicCommentContainer(comment: $0.1, replays: $0.0)}
-//                }
-//
-//
-//            }
-
             let result = res.flatMap { results in
                 return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
                     return request.paginated(data: results, total: count)
