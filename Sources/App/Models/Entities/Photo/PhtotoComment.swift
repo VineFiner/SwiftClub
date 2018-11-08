@@ -34,6 +34,12 @@ struct PhotoComment: Content {
     }
  }
 
+extension PhotoComment {
+    var photo: Parent<PhotoComment, Photo> {
+        return parent(\.photoId)
+    }
+}
+
 extension PhotoComment: Paginatable {}
 extension PhotoComment: Migration {}
 extension PhotoComment: PostgreSQLModel {}

@@ -13,7 +13,7 @@ import Authentication
 
 struct AccessToken: Content {
     struct Const {
-        static let expirationInterval: TimeInterval = 3600
+        static let expirationInterval: TimeInterval = 3600 * 10
     }
     typealias Token = String
     var id: Int?

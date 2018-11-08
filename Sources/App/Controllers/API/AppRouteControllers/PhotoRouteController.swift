@@ -121,16 +121,20 @@ extension PhotoRouteController {
     /// 添加评论
     func addComment(_ request: Request, comment: PhotoComment) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
-        return try comment.save(on: request).makeJson(on: request).always {
-            _ = Photo.query(on: request)
+
+        /// 不能使用 comment.save(on: request).always{} 
+        return try comment.save(on: request).flatMap{ comment in
+            return comment
+                .photo
+                .query(on: request)
                 .first()
-                .unwrap(or: ApiError(code: .modelNotExist))
-                .flatMap (to: Void.self){ photo in
-                    var tmpPhoto = photo
-                    tmpPhoto.commentNum += 1
-                    return tmpPhoto.save(on: request).map(to: Void.self, {_ in })
+                .unwrap(or: ApiError.init(code: .modelNotExist))
+                .flatMap(to: Void.self){ pho in
+                    var tmp = pho
+                    tmp.commentNum += 1
+                    return tmp.update(on: request).map(to: Void.self, {_ in Void()})
                 }
-        }
+            }.makeJson(request: request)
     }
 
     func fetchPhotoCates(_ request: Request) throws -> Future<Response> {
