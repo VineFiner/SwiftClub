@@ -72,6 +72,10 @@ extension User {
     var collectPhotos: Siblings<User, Photo, PhotoCollection> {
         return siblings()
     }
+
+    var photoComments: Children<User, PhotoComment> {
+        return children(\.userId)
+    }
 }
 
 extension User: Paginatable {}

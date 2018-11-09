@@ -1,5 +1,6 @@
 import Routing
 import Vapor
+import Redis
 
 
 public func routes(_ router: Router) throws {
@@ -15,6 +16,13 @@ public func routes(_ router: Router) throws {
 
     router.get("user") { request in
         return try User.query(on: request).paginate(for: request).map{$0.response()}.makeJson(on: request)
+    }
+
+    router.get("redis") { request in
+        return request.withNewConnection(to: .redis, closure: { redis in
+            return redis.command("INFO")
+                .map { $0.string ?? "" }
+        })
     }
 
     let authRouteController = AuthenticationRouteController()

@@ -122,7 +122,7 @@ extension PhotoRouteController {
     func addComment(_ request: Request, comment: PhotoComment) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
 
-        /// 不能使用 comment.save(on: request).always{} 
+        /// 不能使用 comment.save(on: request).always{}
         return try comment.save(on: request).flatMap{ comment in
             return comment
                 .photo
@@ -159,11 +159,27 @@ extension PhotoRouteController {
     }
 
     func fetchMineCollects(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        let _ = try request.authenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+
+        // TODO: 是否可以做分页
+        return try User.find(userId, on: request)
+            .unwrap(or: ApiError(code: .modelNotExist))
+            .flatMap{ return try $0.collectPhotos.query(on: request).paginate(for: request)  }
+            .map{$0.response()}
+            .makeJson(on: request)
     }
 
     func fetchMineComments(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+        let _ = try request.authenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+
+        // TODO: 是否可以做分页
+        return try User.find(userId, on: request)
+            .unwrap(or: ApiError(code: .modelNotExist))
+            .flatMap{ return try $0.photoComments.query(on: request).paginate(for: request) }
+            .map{$0.response()}
+            .makeJson(on: request)
     }
 
     func fetchMinePhotos(_ request: Request) throws -> Future<Response> {
@@ -172,7 +188,8 @@ extension PhotoRouteController {
         return try User
             .find(userId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
-            .flatMap {return try $0.photos.query(on: request).all()}
+            .flatMap {return try $0.photos.query(on: request).paginate(for: request)}
+            .map{$0.response()}
             .makeJson(on: request)
     }
 
