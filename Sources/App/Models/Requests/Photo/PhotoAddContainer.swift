@@ -17,3 +17,8 @@ struct PhotoAddContainer: Content {
     var userId: User.ID
     var ratio: Double   // 宽/高
 }
+
+struct PhotoUserContainer: Content {
+    var userId: Int
+    var photoId: Int
+}

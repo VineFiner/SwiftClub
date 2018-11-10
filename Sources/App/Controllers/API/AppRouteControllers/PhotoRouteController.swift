@@ -31,21 +31,25 @@ final class PhotoRouteController: RouteCollection {
         group.get("cate", "photos", use: fetchCatePhotos)
 
         /// 获取我的评论
-        group.get("comments", use: fetchMineComments)
+        tokenAuthGroup.get("comments", use: fetchMineComments)
         /// 获取我的收藏
-        group.get("collectes", use: fetchMineCollects)
+        tokenAuthGroup.get("collectes", use: fetchMineCollects)
         /// 我的创作
-        group.get("create", use: fetchMinePhotos)
+        tokenAuthGroup.get("create", use: fetchMinePhotos)
         /// 添加
-        group.post(PhotoAddContainer.self, at:"/", use: addPhoto)
+        tokenAuthGroup.post(PhotoAddContainer.self, at:"/", use: addPhoto)
         /// 搜索
         group.get("search", use: searchPhoto)
+
+        /// 判断是否收藏过
+        tokenAuthGroup.post(PhotoUserContainer.self, at:"isCollect", use: isCollect)
+
         /// 添加评论
         tokenAuthGroup.post(PhotoComment.self, at: "comment", use: addComment)
         /// 收藏
-        tokenAuthGroup.post(Photo.parameter, "collecte", use: collectePhoto)
+        tokenAuthGroup.post(PhotoUserContainer.self, at: Photo.parameter, "collecte", use: collectePhoto)
         /// 取消收藏
-        tokenAuthGroup.post(Photo.parameter, "uncollect", use: unCollectePhoto)
+        tokenAuthGroup.post(PhotoUserContainer.self, at: Photo.parameter, "uncollect", use: unCollectePhoto)
     }
 }
 
@@ -123,7 +127,8 @@ extension PhotoRouteController {
         let _ = try request.authenticated(User.self)
 
         /// 不能使用 comment.save(on: request).always{}
-        return try comment.save(on: request).flatMap{ comment in
+        return try comment.save(on: request)
+            .flatMap{ comment in
             return comment
                 .photo
                 .query(on: request)
@@ -141,12 +146,45 @@ extension PhotoRouteController {
         return try PhotoCategory.query(on: request).all().makeJson(on: request)
     }
 
-    func collectePhoto(_ request: Request) throws -> Future<Response> {
-         return try request.makeJson()
+    func collectePhoto(_ request: Request, container: PhotoUserContainer) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        let userId = container.userId
+        let photoId = container.photoId
+        return PhotoCollection
+            .query(on: request)
+            .filter(\.photoId == photoId)
+            .filter(\.userId == userId)
+            .count()
+            .flatMap { count in
+                if count > 0 {
+                    throw ApiError(code: ApiError.Code.custom)
+                } else {
+                    return try PhotoCollection(userId: userId, photoId: photoId).save(on: request).makeJson(on: request)
+                }
+            }
     }
 
-    func unCollectePhoto(_ request: Request) throws -> Future<Response> {
-        return try request.makeJson()
+    func unCollectePhoto(_ request: Request, container: PhotoUserContainer) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        let userId = container.userId
+        let photoId = container.photoId
+        let likNumFuture = Photo
+            .find(photoId, on: request)
+            .unwrap(or: ApiError(code: .modelNotExist))
+            .flatMap { photo -> EventLoopFuture<Empty> in
+                var tmp = photo
+                tmp.likeNum -= 1
+                return tmp.save(on: request).map(to: Empty.self, {_ in Empty()})
+            }
+
+        return try PhotoCollection
+            .query(on: request)
+            .filter(\.photoId == photoId)
+            .filter(\.userId == userId)
+            .delete()
+            .and(likNumFuture)
+            .map {_ in Void()}
+            .makeJson(request: request)
     }
 
     func searchPhoto(_ request: Request) throws -> Future<Response> {
@@ -173,8 +211,6 @@ extension PhotoRouteController {
     func fetchMineComments(_ request: Request) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
         let userId = try request.query.get(Int.self, at: "userId")
-
-        // TODO: 是否可以做分页
         return try User.find(userId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
             .flatMap{ return try $0.photoComments.query(on: request).paginate(for: request) }
@@ -201,6 +237,16 @@ extension PhotoRouteController {
             .flatMap {
                 return try $0.photos.query(on: request).paginate(for: request)
             }.map{$0.response()}
+            .makeJson(on: request)
+    }
+
+    func isCollect(_ request: Request, container: PhotoUserContainer) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        return try PhotoCollection
+            .query(on: request)
+            .filter(\.photoId == container.photoId)
+            .filter(\.userId == container.userId)
+            .count()
             .makeJson(on: request)
     }
 }
