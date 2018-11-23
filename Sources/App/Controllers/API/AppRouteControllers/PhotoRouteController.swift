@@ -55,8 +55,6 @@ final class PhotoRouteController: RouteCollection {
 
 extension PhotoRouteController {
 
-
-
     /// 获取七牛 token
     func fetchQiniuToken(_ request: Request) throws -> Future<Response> {
         let token = try QiniuService.token()

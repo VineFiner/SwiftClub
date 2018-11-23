@@ -42,6 +42,11 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: PhotoComment.self, database: .psql)
     migrations.add(model: PhotoCollection.self, database: .psql)
 
+    /// Mini
+    migrations.add(model: Mini.self, database: .psql)
+    migrations.add(model: MiniTag.self, database: .psql)
+    migrations.add(model: MiniTagPivot.self, database: .psql)
+
     // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
     migrations.add(migration: PopulateMenuForms.self, database: .psql)
