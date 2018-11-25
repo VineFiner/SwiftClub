@@ -30,18 +30,6 @@ final class TopicRouteController: RouteCollection {
     }
 }
 
-extension Array {
-    func filterDuplicates<E: Equatable>(_ filter: (Element) -> E) -> [Element] {
-        var result = [Element]()
-        for value in self {
-            let key = filter(value)
-            if !result.map({filter($0)}).contains(key) {
-                result.append(value)
-            }
-        }
-        return result
-    }
-}
 
 extension TopicRouteController {
 
@@ -82,41 +70,12 @@ extension TopicRouteController {
         return try response.makeJson(on:request)
     }
 
-    //            let result2 = Comment
-    //                .query(on: request)
-    //                .range(request.pageRange)
-    //                .join(\Replay.commentId, to: \Comment.id, method: .left)  //
-    //                .filter(\Comment.topicId == topicId)  // 刷选出这个评论
-    //                .alsoDecode(Replay.self)
-    //                .all()
-    //                .map { self.handleTupleComment(tuples: $0) }
-    //                .flatMap{ results in
-    //                    return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
-    //                        return request.paginated(data: results, total: count)
-    //                    }
-    //                }
-
-    /// 数据组装
-    func handleTupleComment(tuples: [(Comment, Replay)]) -> [TopicCommentContainer] {
-        let items = tuples.map { tuple in
-            return TopicCommentContainer(comment: tuple.0, replays: [tuple.1])
-        }
-        // 找出评论 id
-        let comms = items.filterDuplicates({$0.comment.id})
-        for var tmp in items {
-            for res in comms {
-                if res.comment.id == tmp.comment.id {
-                    tmp.replays.append(contentsOf: res.replays)
-                }
-            }
-        }
-        return comms
-    }
-
+    /// 获取主题列表
     func subjectsList(request: Request) throws -> Future<Response> {
         return try Subject.query(on: request).all().makeJson(on: request)
     }
 
+    /// 获取话题
     func topicFetch(request: Request) throws -> Future<Response> {
         return try request.parameters.next(Topic.self).flatMap(to: TopicContainer.self) { topic in
             return topic
@@ -133,6 +92,7 @@ extension TopicRouteController {
     func topicList(request: Request) throws -> Future<Response> {
         return try Topic
             .query(on: request)
+            .sort(\Topic.createdAt, .descending)
             .range(request.pageRange) // 获取分页数据
             .join(\User.id, to: \Topic.userId)
             .alsoDecode(User.self)

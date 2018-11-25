@@ -13,7 +13,7 @@ import Pagination
 final class Topic: Content {
     var id: Int?
     var title: String
-    var subjectId: Subject.ID  //
+    var subjectId: Subject.ID  // 主题
     var userId: User.ID // 发布人
     var content: String // markdown 内容
 

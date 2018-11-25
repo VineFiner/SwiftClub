@@ -18,8 +18,8 @@ struct MiniTagPivot: PostgreSQLPivot {
     var updatedAt: Date?
     var deletedAt: Date?
 
-    typealias Left = Group
-    typealias Right = Role
+    typealias Left = Mini
+    typealias Right = MiniTag
 
     static var leftIDKey: LeftIDKey = \.miniId
     static var rightIDKey: RightIDKey = \.tagId
