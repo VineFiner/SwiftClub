@@ -89,24 +89,43 @@ extension TopicRouteController {
         }.makeJson(on:request)
     }
 
+    /// TODO: 这块接口处理的不是很好
     func topicList(request: Request) throws -> Future<Response> {
-        let subjectId = try request.query.get(Int?.self, at: "subjectId") ?? 1
-        return try Topic
-            .query(on: request)
-            .filter(\Topic.subjectId == subjectId)
-            .sort(\Topic.createdAt, .descending)
-            .range(request.pageRange) // 获取分页数据
-            .join(\User.id, to: \Topic.userId)
-            .alsoDecode(User.self)
-            .all()
-            .map { tuples in
-                return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
-            }.flatMap{ results in
-                return Topic.query(on: request).count().map(to: Paginated<TopicContainer>.self) { count in
-                    return request.paginated(data: results, total: count)
+        let subjectId = try request.query.get(Int?.self, at: "subjectId")
+        if let subjectId = subjectId, subjectId > 1 {  // 1 是全部
+            return try Topic
+                .query(on: request)
+                .filter(\Topic.subjectId == subjectId)
+                .sort(\Topic.createdAt, .descending)
+                .range(request.pageRange) // 获取分页数据
+                .join(\User.id, to: \Topic.userId)
+                .alsoDecode(User.self)
+                .all()
+                .map { tuples in
+                    return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
+                }.flatMap{ results in
+                    return Topic.query(on: request).filter(\Topic.subjectId == subjectId).count().map(to: Paginated<TopicContainer>.self) { count in
+                        return request.paginated(data: results, total: count)
+                    }
                 }
-            }
-            .makeJson(on:request)
+                .makeJson(on:request)
+        } else { // 全部数据
+            return try Topic
+                .query(on: request)
+                .sort(\Topic.createdAt, .descending)
+                .range(request.pageRange) // 获取分页数据
+                .join(\User.id, to: \Topic.userId)
+                .alsoDecode(User.self)
+                .all()
+                .map { tuples in
+                    return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
+                }.flatMap{ results in
+                    return Topic.query(on: request).count().map(to: Paginated<TopicContainer>.self) { count in
+                        return request.paginated(data: results, total: count)
+                    }
+                }
+                .makeJson(on:request)
+        }
     }
 
     func topicAdd(request: Request, container: Topic) throws -> Future<Response> {
