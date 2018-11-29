@@ -90,8 +90,10 @@ extension TopicRouteController {
     }
 
     func topicList(request: Request) throws -> Future<Response> {
+        let subjectId = try request.query.get(Int?.self, at: "subjectId") ?? 1
         return try Topic
             .query(on: request)
+            .filter(\Topic.subjectId == subjectId)
             .sort(\Topic.createdAt, .descending)
             .range(request.pageRange) // 获取分页数据
             .join(\User.id, to: \Topic.userId)
