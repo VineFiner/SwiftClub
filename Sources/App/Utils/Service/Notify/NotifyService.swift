@@ -14,7 +14,8 @@ import Pagination
 
 final class NotifyService {
 
-    /// 往Notify表中插入一条公告记录
+    /// MARK - Create
+    /// 往Notify表中插入一条公告记录，
     func createAnnouce(content: String, sender: User.ID, on reqeust: Request) throws -> Future<Response> {
         let notify = Notify(type: Notify.announce, target: nil, targetType: nil, action: nil, sender: sender, content: content)
         return try notify.create(on: reqeust).makeJson(on: reqeust)
@@ -40,6 +41,50 @@ final class NotifyService {
             }
     }
 
+    ///MARK - Accessible
+    /// 获取用户的消息列表
+    func getUserNotify(userId: User.ID, on reqeust: Request) throws -> Future<Response>{
+        return try UserNotify
+            .query(on: reqeust)
+            .filter(\UserNotify.userId == userId)
+            .sort(\UserNotify.createdAt)
+            .range(reqeust.pageRange)
+            .join(\UserNotify.notifyId, to: \Notify.id)
+            .alsoDecode(Notify.self)
+            .all()
+            .map { tupels in
+                return tupels.map {tuple in
+                    return NotifyContainer(userNotify: tuple.0, notify: tuple.1)
+                }
+             }
+            .flatMap { results in
+                return UserNotify.query(on: reqeust).filter(\UserNotify.userId == userId).count().map(to: Paginated<NotifyContainer>.self, { count in
+                    return reqeust.paginated(data: results, total: count)
+                })
+            }.makeJson(on: reqeust)
+    }
+
+    /// 更新指定的notify，把isRead属性设置为true
+    func read(user: User, notifyIds:[Notify.ID], on reqeust: Request) throws -> Future<Void>{
+        let userId = try user.requireID()
+        return UserNotify
+            .query(on: reqeust)
+            .filter(\UserNotify.userId == userId)
+            .filter(\UserNotify.notifyId ~~ notifyIds)
+            .update(\UserNotify.isRead, to: true)
+            .all()
+            .map(to: Void.self, { _ in Void()})
+    }
+
+    func createUserNotify(userId: User.ID, notifies: [Notify], on request: Request) throws -> Future<Void> {
+        let futures = notifies.map { notify -> Future<Void> in
+            let userNoti = UserNotify(userId: userId, notifyId: notify.id!, notifyType: notify.type)
+            return userNoti.create(on: request).map(to: Void.self, {_ in })
+        }
+        return Future<Void>.andAll(futures, eventLoop: request.eventLoop)
+    }
+
+
     /// 从UserNotify中获取最近的一条公告信息的创建时间
     /// 用lastTime作为过滤条件，查询Notify的公告信息
     /// 新建UserNotify并关联查询出来的公告信息
@@ -51,24 +96,20 @@ final class NotifyService {
             .sort(\UserNotify.createdAt, .descending)
             .first()
             .flatMap { usernoti in
+                /// 获取到最后一条
                 guard let existUsernoti = usernoti,
                     let lastTime = existUsernoti.createdAt else {
                     return try request.makeJson()
                 }
 
-                return Notify
+                return try Notify
                     .query(on: request)
                     .filter(\.type == Notify.announce)
                     .filter(\.createdAt > lastTime)
                     .all()
                     .flatMap{ noties in
-                        noties.forEach({ (notify) in
-                            guard let notiyId = notify.id else {return}
-                            let userNoti = UserNotify(userId: userId, notifyId: notiyId, notifyType: notify.type)
-                            _ = userNoti.create(on: request)
-                        })
-                        return try request.makeJson(noties)
-                    }
+                       return try self.createUserNotify(userId: userId, notifies: noties, on: request)
+                    }.makeJson(request: request)
         }
 
     }
@@ -79,7 +120,7 @@ final class NotifyService {
     /// 使用订阅配置，过滤查询出来的Notify
     /// 使用过滤好的Notify作为关联新建UserNotify
     func pullRemind(userId: User.ID, on request: Request) throws -> Future<Response> {
-        return Subscription
+        return try Subscription
             .query(on: request)
             .filter(\.userId == userId)
             .all()
@@ -94,21 +135,13 @@ final class NotifyService {
                         .filter(\Notify.createdAt > sub.createdAt)
                         .all()
                 }
-
-                var notifyArr = [Notify]()
-                noties.forEach({ (notifyF) in
-                    let _ = notifyF.flatMap { notis -> EventLoopFuture<Response> in
-                        notis.forEach({ (notify) in
-                            guard let notiyId = notify.id else {return}
-                            notifyArr.append(notify)
-                            let userNoti = UserNotify(userId: userId, notifyId: notiyId, notifyType: notify.type)
-                            let _ = userNoti.create(on: request)
-                        })
-                        return try request.makeJson()
+                let allFutures = noties.map { notifyF in
+                    return notifyF.flatMap { notis -> EventLoopFuture<Void> in
+                        return try self.createUserNotify(userId: userId, notifies: notis, on: request)
                     }
-                })
-                return try request.makeJson(notifyArr)
-            }
+                }
+                return Future<Void>.andAll(allFutures, eventLoop: request.eventLoop)
+            }.makeJson(request: request)
     }
 
 
@@ -120,11 +153,12 @@ final class NotifyService {
             "like_replay": ["comment"]
         ]
         guard let actions = reasonAction[reason] else {throw ApiError(code: .resonNotExist)}
-        actions.forEach { action in
+
+        let futures = actions.map { action -> EventLoopFuture<Void> in
             let subscribe = Subscription(target: target, targetType: targetType, userId: user, action: action)
-            let _ = subscribe.create(on: reqeust).map(to: Void.self, { _ in return})
+            return subscribe.create(on: reqeust).map(to: Void.self, { _ in return})
         }
-        return try reqeust.makeJson()
+        return try Future<Void>.andAll(futures, eventLoop: reqeust.eventLoop).makeJson(request: reqeust)
     }
 
     //// 删除user、target、targetType对应的一则或多则记录
@@ -143,26 +177,5 @@ final class NotifyService {
             .filter(\.userId == userId)
             .all()
             .makeJson(on: reqeust)
-    }
-
-    /// 获取用户的消息列表
-    func getUserNotify(userId: User.ID, on reqeust: Request) throws -> Future<Response>{
-        return try UserNotify
-            .query(on: reqeust)
-            .filter(\UserNotify.userId == userId)
-            .sort(\UserNotify.createdAt)
-            .paginate(for: reqeust)
-            .map {$0.response()}
-            .makeJson(on: reqeust)
-    }
-
-    /// 更新指定的notify，把isRead属性设置为true
-    func read(user: User, notifyIds:[Notify.ID], on reqeust: Request) throws -> Future<Void>{
-        return UserNotify
-            .query(on: reqeust)
-            .filter(\UserNotify.notifyId ~~ notifyIds)
-            .update(\UserNotify.isRead, to: true)
-            .all()
-            .map(to: Void.self, { _ in Void()})
     }
 }

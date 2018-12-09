@@ -89,7 +89,7 @@ extension TopicRouteController {
         }.makeJson(on:request)
     }
 
-    /// TODO: 这块接口处理的不是很好
+
     func topicList(request: Request) throws -> Future<Response> {
         let subjectId = try request.query.get(Int?.self, at: "subjectId")
         if let subjectId = subjectId, subjectId > 1 {  // 1 是全部
