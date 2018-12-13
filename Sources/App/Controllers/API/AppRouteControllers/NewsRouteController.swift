@@ -16,20 +16,20 @@ final class NewsRouteController: RouteCollection {
         let group = router.grouped("api", "news")
         let guardAuthMiddleware = User.guardAuthMiddleware()
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
-        let _ = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
+        let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
-//        tokenAuthGroup.get("list", use: listNews)
+        tokenAuthGroup.get("list", use: listNews)
 //        tokenAuthGroup.get("newer", use: hasNewerNews)
     }
 }
 
 extension NewsRouteController {
+    /// 包含分页
+    func listNews(_ request: Request) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try self.notifyService.getUserNotify(userId: userId, on: request)
+    }
 
-//    func listNews(_ request: Request) throws -> Future<Response> {
-//
-//    }
 
-//    func hasNewerNews(_ request: Request) throws -> Future<Response> {
-//        return try News.query(on: request).all()
-//    }
 }

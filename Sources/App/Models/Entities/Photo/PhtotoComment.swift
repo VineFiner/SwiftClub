@@ -13,8 +13,9 @@ import Pagination
 struct PhotoComment: Content {
     var id: Int?
     var userId: User.ID
-    var userAvator: String?
-    var userName: String
+//    var userAvator: String?
+//    var userName: String
+
     var photoId: Photo.ID
     var content: String
     var likenum: Int // 点赞数
@@ -24,10 +25,8 @@ struct PhotoComment: Content {
     static var createdAtKey: TimestampKey? { return \.createdAt }
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
-    init(userId: User.ID, userName: String, userAvator: String? = nil, photoId: Photo.ID, content: String, likenum: Int = 0) {
+    init(userId: User.ID, photoId: Photo.ID, content: String, likenum: Int = 0) {
         self.userId = userId
-        self.userName = userName
-        self.userAvator = userAvator
         self.photoId = photoId
         self.content = content
         self.likenum = likenum

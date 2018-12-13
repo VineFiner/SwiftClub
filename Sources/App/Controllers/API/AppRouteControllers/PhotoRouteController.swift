@@ -76,33 +76,81 @@ extension PhotoRouteController {
 
     /// 获取图片列表
     func listPhotos(_ request: Request) throws -> Future<Response> {
-
         if let type = try request.query.get(Int?.self, at: "type") {
             if type == 1 { // hot
                 return try Photo
                     .query(on: request)
-                    .paginate(for: request, [PostgreSQLOrderBy.orderBy(PostgreSQLExpression.column(\Photo.likeNum), PostgreSQLDirection.descending)])
-                    .map { $0.response()}
-                    .makeJson(on: request)
+                    .range(request.pageRange)
+                    .sort(\Photo.likeNum)
+                    .join(\PhotoCategory.id, to: \Photo.cateId)
+                    .join(\User.id, to: \Photo.userId)
+                    .alsoDecode(PhotoCategory.self)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to:[PhotoResContainer].self, { tuples in
+                        let data = tuples.map { tuple in
+                            return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                        }
+                        return data
+                    }).flatMap{ results in
+                        return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
             } else { // newer
                 return try Photo
                     .query(on: request)
-                    .paginate(for: request)
-                    .map { $0.response()}
-                    .makeJson(on: request)
+                    .range(request.pageRange)
+                    .sort(\Photo.createdAt, PostgreSQLDirection.descending)
+                    .join(\PhotoCategory.id, to: \Photo.cateId)
+                    .join(\User.id, to: \Photo.userId)
+                    .alsoDecode(PhotoCategory.self)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to:[PhotoResContainer].self, { tuples in
+                        let data = tuples.map { tuple in
+                            return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                        }
+                        return data
+                    }).flatMap{ results in
+                        return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
             }
         } else {
             return try Photo
                 .query(on: request)
-                .paginate(for: request)
-                .map { $0.response()}
-                .makeJson(on: request)
+                .range(request.pageRange)
+                .join(\PhotoCategory.id, to: \Photo.cateId)
+                .join(\User.id, to: \Photo.userId)
+                .alsoDecode(PhotoCategory.self)
+                .alsoDecode(User.self)
+                .all()
+                .map (to:[PhotoResContainer].self, { tuples in
+                    let data = tuples.map { tuple in
+                        return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                    }
+                    return data
+                }).flatMap{ results in
+                    return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                        return request.paginated(data: results, total: count)
+                    }
+                }.makeJson(on: request)
         }
     }
 
     /// 获取图片详情
     func fetchPhoto(_ request: Request) throws  -> Future<Response> {
-        return try request.parameters.next(Photo.self).makeJson(on: request)
+        return try request.parameters.next(Photo.self).flatMap { photo -> EventLoopFuture<PhotoResContainer> in
+            let catFuture = PhotoCategory.find(photo.cateId, on: request).unwrap(or: ApiError(code: .modelNotExist))
+            let userFuture = User.find(photo.userId, on: request).unwrap(or: ApiError(code: .modelNotExist))
+
+            let result = map(catFuture, userFuture, { (cat, user) in
+                return PhotoResContainer(user: user, category: cat, photo: photo)
+            })
+            return result
+        }.makeJson(on: request)
     }
 
     /// 获取图片评论
@@ -110,33 +158,42 @@ extension PhotoRouteController {
         return try request
             .parameters
             .next(Photo.self)
-            .flatMap(to: Page<PhotoComment>.self, { photo in
+            .flatMap{ photo in
                 return try photo
                     .comments
                     .query(on: request)
-                    .paginate(for: request)
-            })
-            .map{ $0.response()}
-            .makeJson(on: request)
+                    .range(request.pageRange)
+                    .join(\User.id, to: \PhotoComment.userId)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to: [PhotoCommentResContainer].self, {tuples in
+                        return tuples.map { tuple in
+                            return PhotoCommentResContainer(comment: tuple.0, commentUser: tuple.1)
+                        }
+                    }).flatMap { results in
+                        return try photo.comments.query(on: request).count().map(to: Paginated<PhotoCommentResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
+            }
     }
 
     /// 添加评论
     func addComment(_ request: Request, comment: PhotoComment) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
-
-        /// 不能使用 comment.save(on: request).always{}
-        return try comment.save(on: request)
+        return try comment
+            .save(on: request)
             .flatMap{ comment in
-            return comment
-                .photo
-                .query(on: request)
-                .first()
-                .unwrap(or: ApiError.init(code: .modelNotExist))
-                .flatMap(to: Void.self){ pho in
-                    var tmp = pho
-                    tmp.commentNum += 1
-                    return tmp.update(on: request).map(to: Void.self, {_ in Void()})
-                }
+                return comment
+                    .photo
+                    .query(on: request)
+                    .first()
+                    .unwrap(or: ApiError(code: .modelNotExist))
+                    .flatMap(to: Void.self){ pho in
+                        var tmp = pho
+                        tmp.commentNum += 1
+                        return tmp.update(on: request).map(to: Void.self, {_ in Void()})
+                    }
             }.makeJson(request: request)
     }
 
@@ -189,53 +246,129 @@ extension PhotoRouteController {
         let searchKey = try request.query.get(String.self, at: "title")
         return try Photo.query(on: request)
             .filter(\Photo.title == searchKey)
-            .paginate(for: request)
-            .map { $0.response()}
-            .makeJson(on: request)
+            .range(request.pageRange)  // # TODO: 太高频率，需要重构
+            .join(\PhotoCategory.id, to: \Photo.cateId)
+            .join(\User.id, to: \Photo.userId)
+            .alsoDecode(PhotoCategory.self)
+            .alsoDecode(User.self)
+            .all()
+            .map (to:[PhotoResContainer].self, { tuples in
+                let data = tuples.map { tuple in
+                    return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                }
+                return data
+            }).flatMap{ results in
+                return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                    return request.paginated(data: results, total: count)
+                }
+            }.makeJson(on: request)
     }
 
     func fetchMineCollects(_ request: Request) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
         let userId = try request.query.get(Int.self, at: "userId")
-
-        // TODO: 是否可以做分页
-        return try User.find(userId, on: request)
+        return User.find(userId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
-            .flatMap{ return try $0.collectPhotos.query(on: request).paginate(for: request)  }
-            .map{$0.response()}
-            .makeJson(on: request)
+            .flatMap { user in
+                return try user
+                    .collectPhotos
+                    .query(on: request)
+                    .range(request.pageRange)  // TODO: 这段高频代码需要重构起来
+                    .join(\PhotoCategory.id, to: \Photo.cateId)
+                    .join(\User.id, to: \Photo.userId)
+                    .alsoDecode(PhotoCategory.self)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to:[PhotoResContainer].self, { tuples in
+                        let data = tuples.map { tuple in
+                            return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                        }
+                        return data
+                    }).flatMap{ results in
+                        return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
+            }
     }
 
     func fetchMineComments(_ request: Request) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
         let userId = try request.query.get(Int.self, at: "userId")
-        return try User.find(userId, on: request)
+        return User.find(userId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
-            .flatMap{ return try $0.photoComments.query(on: request).paginate(for: request) }
-            .map{$0.response()}
-            .makeJson(on: request)
+            .flatMap{ user in
+                return try user.photoComments
+                    .query(on: request)
+                    .range(request.pageRange)
+                    .join(\User.id, to: \PhotoComment.userId)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to: [PhotoCommentResContainer].self, {tuples in
+                        return tuples.map { tuple in
+                            return PhotoCommentResContainer(comment: tuple.0, commentUser: tuple.1)
+                        }
+                    }).flatMap { results in
+                        return try user.photoComments.query(on: request).count().map(to: Paginated<PhotoCommentResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
+            }
     }
 
     func fetchMinePhotos(_ request: Request) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
         let userId = try request.query.get(Int.self, at: "userId")
-        return try User
+        return  User
             .find(userId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
-            .flatMap {return try $0.photos.query(on: request).paginate(for: request)}
-            .map{$0.response()}
-            .makeJson(on: request)
+            .flatMap { return
+                try $0.photos
+                    .query(on: request)
+                    .range(request.pageRange)  // TODO: 这段高频代码需要重构起来
+                    .join(\PhotoCategory.id, to: \Photo.cateId)
+                    .join(\User.id, to: \Photo.userId)
+                    .alsoDecode(PhotoCategory.self)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to:[PhotoResContainer].self, { tuples in
+                        let data = tuples.map { tuple in
+                            return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                        }
+                        return data
+                    }).flatMap{ results in
+                        return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
+        }
     }
 
     func fetchCatePhotos(_ request: Request) throws -> Future<Response> {
         let cateId = try request.query.get(Int.self, at: "cateId")
-        return try PhotoCategory
+        return PhotoCategory
             .find(cateId, on: request)
             .unwrap(or: ApiError(code: .modelNotExist))
             .flatMap {
-                return try $0.photos.query(on: request).paginate(for: request)
-            }.map{$0.response()}
-            .makeJson(on: request)
+                return try $0.photos
+                    .query(on: request)
+                    .range(request.pageRange)  // TODO: 这段高频代码需要重构起来
+                    .join(\PhotoCategory.id, to: \Photo.cateId)
+                    .join(\User.id, to: \Photo.userId)
+                    .alsoDecode(PhotoCategory.self)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map (to:[PhotoResContainer].self, { tuples in
+                        let data = tuples.map { tuple in
+                            return PhotoResContainer(user: tuple.1, category: tuple.0.1, photo: tuple.0.0)
+                        }
+                        return data
+                    }).flatMap{ results in
+                        return Photo.query(on: request).count().map(to: Paginated<PhotoResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on: request)
+        }
     }
 
     func isCollect(_ request: Request, container: PhotoUserContainer) throws -> Future<Response> {

@@ -16,14 +16,19 @@ struct Photo: Content {
     var title: String  // 标题
     var intro: String? // 简介
     var tags: String // 关键字 , 分隔
+
     var cateId: PhotoCategory.ID // 分类 id
-    var cateName: String
-    var userId: User.ID
-    var userName: String
-    var userAvator: String?
+//    var cateName: String
+
     var ratio: Double   // 宽/高
     var commentNum: Int // 评论数
     var likeNum: Int  // 点赞数
+
+    var userId: User.ID
+//    var userName: String
+//    var userAvator: String?
+
+
 
     var createdAt: Date?
     var updatedAt: Date?
@@ -38,10 +43,7 @@ struct Photo: Content {
         self.intro = container.intro
         self.tags = container.tags ?? ""
         self.cateId = container.cateId
-        self.cateName = cate.name
         self.userId = container.userId
-        self.userName = user.name
-        self.userAvator = user.avator
         self.ratio = container.ratio
         self.commentNum = 0
         self.likeNum = 0

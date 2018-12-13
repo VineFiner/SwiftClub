@@ -13,6 +13,9 @@ import Pagination
 
 
 final class TopicRouteController: RouteCollection {
+
+    let notifyService = NotifyService()
+
     func boot(router: Router) throws {
         let group = router.grouped("api", "topic")
         let guardAuthMiddleware = User.guardAuthMiddleware()
