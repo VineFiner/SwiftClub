@@ -53,9 +53,9 @@ extension TopicRouteController {
         return try request
             .parameters
             .next(Topic.self)
-            .flatMap (to: [TopicCommentContainer].self,{ topic in
+            .flatMap { topic in
                 let topicId = try topic.requireID()
-                return Comment
+                return try Comment
                     .query(on: request)
                     .filter(\Comment.topicId == topicId)
                     .range(request.pageRange)
@@ -68,12 +68,12 @@ extension TopicRouteController {
                         return comments.map { comment in
                             return self.fetchCommentContainer(on: request, comment: comment)
                         }.flatten(on: request)
-                    }
-            }).flatMap { results in
-                return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
-                    return request.paginated(data: results, total: count)
-                }
-            }.makeJson(on:request)
+                    }.flatMap { results in
+                        return Comment.query(on: request).filter(\Comment.topicId == topicId).count().map(to: Paginated<TopicCommentContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on:request)
+        }
     }
 
     func fetchCommentContainer(on request: Request, comment: TopicCommentResContainer) -> Future<TopicCommentContainer> {
