@@ -48,29 +48,48 @@ extension TopicRouteController {
         return try comment.create(on: request).makeJson(on: request)
     }
 
-    // 获取话题的评论数据
+    // 获取话题的评论数据， 不支持左连接
     func topicComments(request: Request) throws -> Future<Response> {
-        let response = try request.parameters.next(Topic.self).flatMap(to: Paginated<TopicCommentContainer>.self) { topic in
-            let topicId = try topic.requireID()
-            let comments = Comment.query(on: request).filter(\Comment.topicId == topicId).range(request.pageRange).all()
-
-            let res = comments.flatMap(to: [TopicCommentContainer].self, { comments  in
-                let replysFutures = comments.map { comment in
-                    return Replay.query(on: request).filter(\Replay.commentId == comment.id!).all().and(result: comment).map({ tuples in
-                        return TopicCommentContainer(comment: tuples.1, replays: tuples.0)
-                    })
-                }
-                return replysFutures.flatten(on: request)
-            })
-            let result = res.flatMap { results in
+        return try request
+            .parameters
+            .next(Topic.self)
+            .flatMap (to: [TopicCommentContainer].self,{ topic in
+                let topicId = try topic.requireID()
+                return Comment
+                    .query(on: request)
+                    .filter(\Comment.topicId == topicId)
+                    .range(request.pageRange)
+                    .join(\User.id, to: \Comment.userId)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map { tuples in
+                        return tuples.map { TopicCommentResContainer(comment: $0.0, user: $0.1) }
+                    }.flatMap { comments in
+                        return comments.map { comment in
+                            return self.fetchCommentContainer(on: request, comment: comment)
+                        }.flatten(on: request)
+                    }
+            }).flatMap { results in
                 return Comment.query(on: request).count().map(to: Paginated<TopicCommentContainer>.self) { count in
                     return request.paginated(data: results, total: count)
                 }
-            }
+            }.makeJson(on:request)
+    }
 
-            return result
-        }
-        return try response.makeJson(on:request)
+    func fetchCommentContainer(on request: Request, comment: TopicCommentResContainer) -> Future<TopicCommentContainer> {
+        return Replay
+            .query(on: request)
+            .filter(\Replay.commentId == comment.id!)
+            .all()
+            .flatMap { replays in
+                return replays.map { replay in
+                    return map(User.find(replay.userId, on: request), User.find(replay.toUid, on: request), { user, toUser in
+                        return CommentReplayResContainer(replay: replay, user:user!, toUser: toUser!)
+                    })
+                }.flatten(on: request)
+            }.map { results in
+                return TopicCommentContainer(comment: comment, replays: results)
+            }
     }
 
     /// 获取主题列表

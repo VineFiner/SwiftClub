@@ -8,10 +8,10 @@ import Vapor
 import FluentPostgreSQL
 
 struct TopicCommentContainer: Content {
-    var comment: Comment
-    var replays: [Replay]
+    var comment: TopicCommentResContainer
+    var replays: [CommentReplayResContainer]
 
-    init(comment: Comment, replays: [Replay]) {
+    init(comment: TopicCommentResContainer, replays: [CommentReplayResContainer]) {
         self.comment = comment
         self.replays = replays
     }

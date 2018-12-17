@@ -13,9 +13,6 @@ import Pagination
 struct PhotoComment: Content {
     var id: Int?
     var userId: User.ID
-//    var userAvator: String?
-//    var userName: String
-
     var photoId: Photo.ID
     var content: String
     var likenum: Int // 点赞数

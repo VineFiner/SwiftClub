@@ -12,8 +12,6 @@ import FluentPostgreSQL
 struct Comment: Content {
     var id: Int?
     var userId: User.ID  // 评论人
-    var userName: String?  // 评论人名字
-    var userAvator: String? // 评论人图片
     var topicId: Topic.ID  // 话题 id
     var content: String  // 评论内容
     
