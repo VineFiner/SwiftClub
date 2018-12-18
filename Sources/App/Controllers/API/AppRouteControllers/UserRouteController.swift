@@ -15,20 +15,20 @@ final class UserRouteController: RouteCollection {
     func boot(router: Router) throws {
         let group = router.grouped("api", "users")
         
-        group.post(EmailLoginContainer.self, at: "login", use: loginUserHandler)
-        group.post(UserRegisterContainer.self, at: "register", use: registerUserHandler)
+        group.post(EmailLoginReqContainer.self, at: "login", use: loginUserHandler)
+        group.post(UserRegisterReqContainer.self, at: "register", use: registerUserHandler)
         /// 修改密码 
-        group.post(NewsPasswordContainer.self, at:"newPassword", use: newPassword)
+        group.post(NewsPasswordReqContainer.self, at:"newPassword", use: newPassword)
 
         /// 发送修改密码验证码
-        group.post(UserEmailContainer.self, at:"changePwdCode", use: sendPwdCode)
+        group.post(UserEmailReqContainer.self, at:"changePwdCode", use: sendPwdCode)
 
         /// 激活校验码
         group.get("activate", use: activeRegisteEmailCode)
 
         // 微信小程序
         // /oauth/token 通过小程序提供的验证信息获取服务器自己的 token
-        group.post(UserWxAppOauthContainer.self, at: "/oauth/token", use: wxappOauthToken)
+        group.post(UserWxAppOauthReqContainer.self, at: "/oauth/token", use: wxappOauthToken)
     }
 }
 
@@ -36,7 +36,7 @@ final class UserRouteController: RouteCollection {
 private extension UserRouteController {
     /// 小程序调用wx.login() 获取 临时登录凭证code ，并回传到开发者服务器。
     // 开发者服务器以code换取用户唯一标识openid 和 会话密钥session_key。
-    func wxappOauthToken(_ request: Request, container: UserWxAppOauthContainer) throws -> Future<Response> {
+    func wxappOauthToken(_ request: Request, container: UserWxAppOauthReqContainer) throws -> Future<Response> {
 
         let appId = "wx295f34d030798e48"
         let secret = "39a549d066a34c56c8f1d34d606e3a95"
@@ -57,7 +57,7 @@ private extension UserRouteController {
             let shiper = Cipher(algorithm: cipherAlgorithm)
 
             let decrypted = try shiper.decrypt(encryptedData, key: sessionKey, iv: iv)
-            let data = try JSONDecoder().decode(WxAppUserInfoContainer.self, from: decrypted)
+            let data = try JSONDecoder().decode(WxAppUserInfoResContainer.self, from: decrypted)
 
             if data.watermark.appid == appId {
                 /// 通过 resContainer.session_key 和 data.openid
@@ -103,7 +103,7 @@ private extension UserRouteController {
     // 激活注册校验码
     func activeRegisteEmailCode(_ request: Request) throws -> Future<Response> {
         // 获取到参数
-        let filters = try request.query.decode(RegisteCodeContainer.self)
+        let filters = try request.query.decode(RegisteCodeReqContainer.self)
         return ActiveCode
             .query(on: request)
             .filter(\ActiveCode.codeType == ActiveCode.CodeType.activeAccount.rawValue)
@@ -122,7 +122,7 @@ private extension UserRouteController {
 
 
     /// 发送修改密码的验证码
-    func sendPwdCode(_ request: Request, container: UserEmailContainer) throws -> Future<Response> {
+    func sendPwdCode(_ request: Request, container: UserEmailReqContainer) throws -> Future<Response> {
         return UserAuth
             .query(on: request)
             .filter(\.identityType == UserAuth.AuthType.email.rawValue)
@@ -142,7 +142,7 @@ private extension UserRouteController {
 
     }
 
-    func loginUserHandler(_ request: Request, container: EmailLoginContainer) throws -> Future<Response> {
+    func loginUserHandler(_ request: Request, container: EmailLoginReqContainer) throws -> Future<Response> {
         return UserAuth
             .query(on: request)
             .filter(\UserAuth.identityType == UserAuth.AuthType.email.rawValue)
@@ -159,7 +159,7 @@ private extension UserRouteController {
     }
 
     // TODO: send email has some error , wait 
-    func newPassword(_ request: Request, container: NewsPasswordContainer) throws -> Future<Response> {
+    func newPassword(_ request: Request, container: NewsPasswordReqContainer) throws -> Future<Response> {
 
         return UserAuth
             .query(on: request)
@@ -198,7 +198,7 @@ private extension UserRouteController {
             }
     }
 
-    func registerUserHandler(_ request: Request, container: UserRegisterContainer) throws -> Future<Response> {
+    func registerUserHandler(_ request: Request, container: UserRegisterReqContainer) throws -> Future<Response> {
         return UserAuth
             .query(on: request)
             .filter(\.identityType == UserAuth.AuthType.email.rawValue)

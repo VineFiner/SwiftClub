@@ -27,7 +27,7 @@ final class TopicRouteController: RouteCollection {
         group.get(Topic.parameter, use: topicFetch) // topic 详情
         group.get(Topic.parameter, "comments", use: topicComments)
 
-        tokenAuthGroup.post(Comment.self, at:"comment", use: topicAddComment)
+        tokenAuthGroup.post(TopicCommentReqContainer.self, at:"comment", use: topicAddComment)
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
     }
@@ -43,8 +43,9 @@ extension TopicRouteController {
     }
 
     // 添加评论
-    func topicAddComment(request: Request, comment: Comment) throws -> Future<Response> {
+    func topicAddComment(request: Request, container: TopicCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
+        let comment = Comment(targetId: container.topicId, userId: container.userId, content: container.content)
         return try comment.create(on: request).makeJson(on: request)
     }
 
@@ -57,7 +58,8 @@ extension TopicRouteController {
                 let topicId = try topic.requireID()
                 return try Comment
                     .query(on: request)
-                    .filter(\Comment.topicId == topicId)
+                    .filter(\Comment.targetType == Comment.CommentType.topic)
+                    .filter(\Comment.targetId == topicId)
                     .range(request.pageRange)
                     .join(\User.id, to: \Comment.userId)
                     .alsoDecode(User.self)
@@ -69,14 +71,18 @@ extension TopicRouteController {
                             return self.fetchCommentContainer(on: request, comment: comment)
                         }.flatten(on: request)
                     }.flatMap { results in
-                        return Comment.query(on: request).filter(\Comment.topicId == topicId).count().map(to: Paginated<TopicCommentContainer>.self) { count in
+                        return Comment.query(on: request)
+                            .filter(\Comment.targetType == Comment.CommentType.topic)
+                            .filter(\Comment.targetId == topicId)
+                            .count()
+                            .map(to: Paginated<TopicFullCommentResContainer>.self) { count in
                             return request.paginated(data: results, total: count)
                         }
                     }.makeJson(on:request)
         }
     }
 
-    func fetchCommentContainer(on request: Request, comment: TopicCommentResContainer) -> Future<TopicCommentContainer> {
+    func fetchCommentContainer(on request: Request, comment: TopicCommentResContainer) -> Future<TopicFullCommentResContainer> {
         return Replay
             .query(on: request)
             .filter(\Replay.commentId == comment.id!)
@@ -88,7 +94,7 @@ extension TopicRouteController {
                     })
                 }.flatten(on: request)
             }.map { results in
-                return TopicCommentContainer(comment: comment, replays: results)
+                return TopicFullCommentResContainer(comment: comment, replays: results)
             }
     }
 
@@ -99,14 +105,14 @@ extension TopicRouteController {
 
     /// 获取话题
     func topicFetch(request: Request) throws -> Future<Response> {
-        return try request.parameters.next(Topic.self).flatMap(to: TopicContainer.self) { topic in
+        return try request.parameters.next(Topic.self).flatMap(to: TopicResContainer.self) { topic in
             return topic
                 .creator
                 .query(on: request)
                 .first()
                 .unwrap(or: ApiError(code: .modelNotExist))
-                .map(to: TopicContainer.self) { user in
-                return TopicContainer(topic: topic, user: user)
+                .map(to: TopicResContainer.self) { user in
+                return TopicResContainer(topic: topic, user: user)
             }
         }.makeJson(on:request)
     }
@@ -124,9 +130,9 @@ extension TopicRouteController {
                 .alsoDecode(User.self)
                 .all()
                 .map { tuples in
-                    return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
+                    return tuples.map { tuple in  return TopicResContainer(topic: tuple.0, user: tuple.1)}
                 }.flatMap{ results in
-                    return Topic.query(on: request).filter(\Topic.subjectId == subjectId).count().map(to: Paginated<TopicContainer>.self) { count in
+                    return Topic.query(on: request).filter(\Topic.subjectId == subjectId).count().map(to: Paginated<TopicResContainer>.self) { count in
                         return request.paginated(data: results, total: count)
                     }
                 }
@@ -140,9 +146,9 @@ extension TopicRouteController {
                 .alsoDecode(User.self)
                 .all()
                 .map { tuples in
-                    return tuples.map { tuple in  return TopicContainer(topic: tuple.0, user: tuple.1)}
+                    return tuples.map { tuple in  return TopicResContainer(topic: tuple.0, user: tuple.1)}
                 }.flatMap{ results in
-                    return Topic.query(on: request).count().map(to: Paginated<TopicContainer>.self) { count in
+                    return Topic.query(on: request).count().map(to: Paginated<TopicResContainer>.self) { count in
                         return request.paginated(data: results, total: count)
                     }
                 }

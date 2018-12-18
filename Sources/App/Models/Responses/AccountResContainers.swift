@@ -1,14 +1,36 @@
 //
-//  WxAppUserInfoContainer.swift
+//  AccountResContainers.swift
 //  App
 //
-//  Created by laijihua on 2018/9/11.
+//  Created by laijihua on 2018/12/18.
 //
 
 import Vapor
 
+struct AuthenticationResContainer: Content {
+    //MARK: Properties
+    let accessToken: AccessToken.Token
+    let expiresIn: TimeInterval
+    let refreshToken: RefreshToken.Token
+
+    //MARK: Initializers
+    init(accessToken: AccessToken, refreshToken: RefreshToken) {
+        self.accessToken = accessToken.token
+        self.expiresIn = accessToken.expiryTime.timeIntervalSince1970 //Not honored, just an estimate
+        self.refreshToken = refreshToken.token
+    }
+
+    //MARK: Codable
+    private enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case expiresIn = "expires_in"
+        case refreshToken = "refresh_token"
+    }
+}
+
+
 /// openId : 用户在当前小程序的唯一标识
-struct WxAppUserInfoContainer: Content {
+struct WxAppUserInfoResContainer: Content {
     var openId: String
     var nickName: String
     var city: String
@@ -29,3 +51,4 @@ struct WxAppCodeResContainer: Content {
     var expires_in: TimeInterval
     var openid: String
 }
+

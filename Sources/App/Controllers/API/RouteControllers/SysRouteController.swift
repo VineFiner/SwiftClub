@@ -40,7 +40,7 @@ final class SysRouteController: RouteCollection {
         let userGroup = group.grouped("user")
         userGroup.post(DeleteIDContainer<User>.self, at: "delete", use: deleteUser)
         userGroup.get("page", use: listUser)
-        userGroup.post(UserRegisterContainer.self,  at:"add", use: addUser)
+        userGroup.post(UserRegisterReqContainer.self,  at:"add", use: addUser)
 
         /// 权限(资源)管理
         let rightGroup = group.grouped("resource")
@@ -111,7 +111,7 @@ extension SysRouteController {
 
 //MARK: - User
 extension SysRouteController {
-    func addUser(_ request: Request, container: UserRegisterContainer) throws -> Future<Response> {
+    func addUser(_ request: Request, container: UserRegisterReqContainer) throws -> Future<Response> {
         return UserAuth
             .query(on: request)
             .filter(\.identityType == UserAuth.AuthType.email.rawValue)

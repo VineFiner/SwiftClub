@@ -37,7 +37,7 @@ final class PhotoRouteController: RouteCollection {
         /// 我的创作
         tokenAuthGroup.get("create", use: fetchMinePhotos)
         /// 添加
-        tokenAuthGroup.post(PhotoAddContainer.self, at:"/", use: addPhoto)
+        tokenAuthGroup.post(PhotoAddReqContainer.self, at:"/", use: addPhoto)
         /// 搜索
         group.get("search", use: searchPhoto)
 
@@ -62,7 +62,7 @@ extension PhotoRouteController {
     }
 
     /// 添加图片接口
-    func addPhoto(_ reqeust: Request, container: PhotoAddContainer) throws -> Future<Response> {
+    func addPhoto(_ reqeust: Request, container: PhotoAddReqContainer) throws -> Future<Response> {
         let _ = try reqeust.authenticated(User.self)
         let result = flatMap(to: Photo.self, User.find(container.userId, on: reqeust), PhotoCategory.find(container.cateId, on: reqeust)) { (user, category) in
             guard let user = user , let cate = category else {

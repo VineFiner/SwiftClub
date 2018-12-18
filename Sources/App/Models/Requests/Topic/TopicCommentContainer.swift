@@ -7,7 +7,7 @@
 import Vapor
 import FluentPostgreSQL
 
-struct TopicCommentContainer: Content {
+struct TopicCommentResContainer: Content {
     var comment: TopicCommentResContainer
     var replays: [CommentReplayResContainer]
 

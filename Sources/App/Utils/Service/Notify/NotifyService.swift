@@ -54,11 +54,11 @@ final class NotifyService {
             .all()
             .map { tupels in
                 return tupels.map {tuple in
-                    return NotifyContainer(userNotify: tuple.0, notify: tuple.1)
+                    return NotifyResContainer(userNotify: tuple.0, notify: tuple.1)
                 }
              }
             .flatMap { results in
-                return UserNotify.query(on: reqeust).filter(\UserNotify.userId == userId).count().map(to: Paginated<NotifyContainer>.self, { count in
+                return UserNotify.query(on: reqeust).filter(\UserNotify.userId == userId).count().map(to: Paginated<NotifyResContainer>.self, { count in
                     return reqeust.paginated(data: results, total: count)
                 })
             }.makeJson(on: reqeust)

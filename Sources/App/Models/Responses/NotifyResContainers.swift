@@ -7,7 +7,7 @@
 
 import Vapor
 
-struct NotifyContainer: Content {
+struct NotifyResContainer: Content {
     var userNotify: UserNotify
     var notify: Notify
     init(userNotify: UserNotify, notify: Notify) {

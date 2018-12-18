@@ -16,13 +16,13 @@ final class AccountRouteController: RouteCollection {
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
         tokenAuthGroup.get("info", use: getAcccountInfo)
-        tokenAuthGroup.post(UserUpdateContainer.self, at:"update", use: updateAccountInfo)
+        tokenAuthGroup.post(UserUpdateReqContainer.self, at:"update", use: updateAccountInfo)
     }
 }
 
 extension AccountRouteController {
 
-    func updateAccountInfo(_ request: Request, container: UserUpdateContainer) throws -> Future<Response> {
+    func updateAccountInfo(_ request: Request, container: UserUpdateReqContainer) throws -> Future<Response> {
         let user = try request.requireAuthenticated(User.self)
         user.avator = container.avator ?? user.avator
         user.name = container.name ?? user.name

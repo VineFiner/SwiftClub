@@ -1,14 +1,14 @@
 //
-//  PhotoAddContainer.swift
+//  PhotoReqContainers.swift
 //  App
 //
-//  Created by laijihua on 2018/11/3.
+//  Created by laijihua on 2018/12/18.
 //
 
 import Vapor
 import FluentPostgreSQL
 
-struct PhotoAddContainer: Content {
+struct PhotoAddReqContainer: Content {
     var url: String
     var title: String // 标题
     var intro: String? // 简介

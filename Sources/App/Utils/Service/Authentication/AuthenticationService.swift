@@ -25,10 +25,10 @@ final class AuthenticationService {
     func authenticationContainer(for userId: User.ID, on connection: Request) throws -> Future<Response> {
         return try removeAllTokens(for: userId, on: connection)
             .flatMap { _ in
-            return try map(to: AuthenticationContainer.self,
+            return try map(to: AuthenticationResContainer.self,
                            self.accessToken(for: userId, on: connection),
                            self.refreshToken(for: userId, on: connection)) { access, refresh in
-                return AuthenticationContainer(accessToken: access, refreshToken: refresh)
+                return AuthenticationResContainer(accessToken: access, refreshToken: refresh)
                 }.makeJson(on: connection)
         }
     }

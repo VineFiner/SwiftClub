@@ -37,7 +37,7 @@ struct Photo: Content {
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
 
-    init(user: User, cate: PhotoCategory, container: PhotoAddContainer) {
+    init(user: User, cate: PhotoCategory, container: PhotoAddReqContainer) {
         self.url = container.url
         self.title = container.title
         self.intro = container.intro
