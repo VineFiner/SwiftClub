@@ -28,7 +28,7 @@ struct Replay: Content {
 }
 
 extension Replay {
-    enum ReplayType: Int, Codable {
+    enum ReplayType: Int, PostgreSQLEnum {
         case comment = 0
         case replay = 1
     }
