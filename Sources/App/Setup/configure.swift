@@ -9,6 +9,7 @@ public func configure(
     _ env: inout Environment,
     _ services: inout Services
 ) throws {
+    print("环境\nrelease:\(env.isRelease)")
     let router = EngineRouter.default()
     try routes(router)
     services.register(router, as: Router.self)
@@ -32,7 +33,7 @@ public func configure(
     services.register(contentConfig)
 
     var databasesConfig = DatabasesConfig()
-    try databases(config: &databasesConfig, services: &services)
+    try databases(config: &databasesConfig, services: &services, env: &env)
     services.register(databasesConfig)
 
     services.register { (container) -> MigrationConfig in

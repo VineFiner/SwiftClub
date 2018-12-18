@@ -39,9 +39,7 @@ struct CommentReplayResContainer: Content {
     var commentId: Comment.ID // 评论 id
     var parentId: Replay.ID? // 父回复 id
     var replayType: Replay.ReplayType // 回复类型
-
     var content: String
-
     var createdAt: Date?
 
     init(replay: Replay, user: User, toUser: User) {
