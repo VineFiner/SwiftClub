@@ -7,6 +7,7 @@
 
 import Vapor
 
+
 struct TopicCommentResContainer: Content {
     var id: Int?
     var userId: User.ID  // 评论人
