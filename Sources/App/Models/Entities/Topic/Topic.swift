@@ -16,7 +16,6 @@ final class Topic: Content {
     var subjectId: Subject.ID  // 主题
     var userId: User.ID // 发布人
     var content: String // markdown 内容
-
     var createdAt: Date?
     var updatedAt: Date?
     var deletedAt: Date?
@@ -44,6 +43,11 @@ extension Topic {
     // 评论
     var comments: Children<Topic, Comment> {
         return children(\Comment.id)
+    }
+
+    // tags
+    var tags: Siblings<Topic, Tag, TopicTag> {
+        return siblings()
     }
 
 }

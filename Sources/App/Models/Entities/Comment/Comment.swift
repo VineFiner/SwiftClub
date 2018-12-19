@@ -37,6 +37,7 @@ extension Comment {
     enum CommentType: Int, PostgreSQLEnum {
         case topic = 0
         case photo = 1
+        case information = 2
     }
 }
 

@@ -35,6 +35,15 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Topic.self, database: .psql)
     migrations.add(model: Comment.self, database: .psql)
     migrations.add(model: Replay.self, database: .psql)
+    migrations.add(model: Tag.self, database: .psql)
+    migrations.add(model: TopicTag.self , database: .psql)
+
+
+    /// Information
+    migrations.add(model: Infomation.self, database: .psql)
+
+    /// Question
+
 
     /// Photo
     migrations.add(model: PhotoCategory.self, database: .psql)
