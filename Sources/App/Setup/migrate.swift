@@ -30,6 +30,11 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Subscription.self, database: .psql)
     migrations.add(model: UserAuth.self, database: .psql)
 
+    /// ENUM
+    migrations.add(migration: CommentType.self, database: .psql)
+    migrations.add(migration: ReplayType.self, database: .psql)
+    migrations.add(migration: VisitType.self, database: .psql)
+
     /// Club
     migrations.add(model: Subject.self, database: .psql)
     migrations.add(model: Topic.self, database: .psql)
@@ -37,14 +42,12 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Replay.self, database: .psql)
     migrations.add(model: Tag.self, database: .psql)
     migrations.add(model: TopicTag.self , database: .psql)
-
-
-    /// Information
     migrations.add(model: Infomation.self, database: .psql)
+    migrations.add(model: Question.self, database: .psql)
+    migrations.add(model: Visit.self, database: .psql)
 
-    /// Question
 
-
+//// ==========================================
     /// Photo
     migrations.add(model: PhotoCategory.self, database: .psql)
     migrations.add(model: Photo.self, database: .psql)

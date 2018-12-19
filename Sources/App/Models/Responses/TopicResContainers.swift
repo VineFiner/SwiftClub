@@ -38,7 +38,7 @@ struct CommentReplayResContainer: Content {
     var toUavator: String? // 目标用户头像
     var commentId: Comment.ID // 评论 id
     var parentId: Replay.ID? // 父回复 id
-    var replayType: Replay.ReplayType // 回复类型
+    var replayType: ReplayType // 回复类型
     var content: String
     var createdAt: Date?
 

@@ -9,6 +9,11 @@
 import Vapor
 import FluentPostgreSQL
 
+enum VisitType: Int, PostgreSQLEnum, PostgreSQLMigration {
+    case topic = 0
+    case information = 1
+    case question = 2
+}
 /// 浏览表
 struct Visit: Content {
     var id: Int?
@@ -21,12 +26,6 @@ struct Visit: Content {
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
 }
 
-extension Visit {
-    enum VisitType: Int, PostgreSQLEnum {
-        case topic = 0
-        case question = 1
-    }
-}
 
 extension Visit: PostgreSQLModel {}
 extension Visit: Migration {}

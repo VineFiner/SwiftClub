@@ -8,6 +8,10 @@
 import Vapor
 import FluentPostgreSQL
 
+enum ReplayType: Int, PostgreSQLEnum, PostgreSQLMigration {
+    case comment = 0
+    case replay = 1
+}
 /// 评论回复表
 struct Replay: Content {
     var id: Int?
@@ -16,7 +20,7 @@ struct Replay: Content {
     var toUid: User.ID // 目标用户 id  B
     var commentId: Comment.ID // 评论 id
     var parentId: Replay.ID? // 父回复 id
-    var replayType: Replay.ReplayType // 回复类型
+    var replayType: ReplayType // 回复类型
     
     var content: String
     var createdAt: Date?
@@ -28,10 +32,7 @@ struct Replay: Content {
 }
 
 extension Replay {
-    enum ReplayType: Int, PostgreSQLEnum {
-        case comment = 0
-        case replay = 1
-    }
+
 }
 
 extension Replay: Migration {}

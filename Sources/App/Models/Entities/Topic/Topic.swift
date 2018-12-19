@@ -10,7 +10,7 @@ import Vapor
 import FluentPostgreSQL
 import Pagination
 
-final class Topic: Content {
+struct Topic: Content {
     var id: Int?
     var title: String
     var subjectId: Subject.ID  // 主题

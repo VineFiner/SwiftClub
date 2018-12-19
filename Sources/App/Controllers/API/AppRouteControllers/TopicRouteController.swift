@@ -58,7 +58,7 @@ extension TopicRouteController {
                 let topicId = try topic.requireID()
                 return try Comment
                     .query(on: request)
-                    .filter(\Comment.targetType == Comment.CommentType.topic)
+                    .filter(\Comment.targetType == CommentType.topic)
                     .filter(\Comment.targetId == topicId)
                     .range(request.pageRange)
                     .join(\User.id, to: \Comment.userId)
@@ -72,7 +72,7 @@ extension TopicRouteController {
                         }.flatten(on: request)
                     }.flatMap { results in
                         return Comment.query(on: request)
-                            .filter(\Comment.targetType == Comment.CommentType.topic)
+                            .filter(\Comment.targetType == CommentType.topic)
                             .filter(\Comment.targetId == topicId)
                             .count()
                             .map(to: Paginated<TopicFullCommentResContainer>.self) { count in

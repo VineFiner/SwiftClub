@@ -30,6 +30,4 @@ extension NewsRouteController {
         let userId = try request.query.get(Int.self, at: "userId")
         return try self.notifyService.getUserNotify(userId: userId, on: request)
     }
-
-
 }

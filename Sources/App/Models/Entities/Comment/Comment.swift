@@ -8,14 +8,22 @@
 import Vapor
 import FluentPostgreSQL
 
+enum CommentType: Int, PostgreSQLEnum, PostgreSQLMigration {
+    case topic = 0
+    case photo = 1
+    case information = 2
+    case question = 3
+}
+
 /// 评论表， 设计为二级评论表
 struct Comment: Content {
     var id: Int?
-    var targetType: Comment.CommentType  // 评论类型： topic | photo
+    var targetType: CommentType  // 评论类型： topic | photo
     var targetId: Int  // 评论目标的 id
     var userId: User.ID  // 评论人
     var content: String  // 评论内容
     var likeNum: Int  // 点赞数
+
     var createdAt: Date?
     var updatedAt: Date?
     var deletedAt: Date?
@@ -32,14 +40,6 @@ struct Comment: Content {
     }
 }
 
-
-extension Comment {
-    enum CommentType: Int, PostgreSQLEnum {
-        case topic = 0
-        case photo = 1
-        case information = 2
-    }
-}
 
 extension Comment {
     var replays: Children<Comment, Replay> {
