@@ -27,3 +27,33 @@ struct InformationResContainer: Content {
         self.createdAt = info.createdAt
     }
 }
+
+struct InformationCommentResContainer: Content {
+    var id: Int?
+    var userId: User.ID  // 评论人
+    var userName: String?  // 评论人名字
+    var userAvator: String? // 评论人图片
+    var topicId: Topic.ID  // 话题 id
+    var content: String  // 评论内容
+    var createdAt: Date?
+
+    init(comment: Comment, user: User) {
+        self.id = comment.id
+        self.userId = comment.userId
+        self.userName = user.name
+        self.userAvator = user.avator
+        self.topicId = comment.targetId
+        self.content = comment.content
+        self.createdAt = comment.createdAt
+    }
+}
+
+struct InformationFullCommentResContainer: Content {
+    var comment: InformationCommentResContainer
+    var replays: [CommentReplayResContainer]
+    init(comment: InformationCommentResContainer, replays: [CommentReplayResContainer]) {
+        self.comment = comment
+        self.replays = replays
+    }
+}
+

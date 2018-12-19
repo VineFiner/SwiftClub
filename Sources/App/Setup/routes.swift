@@ -48,5 +48,11 @@ public func routes(_ router: Router) throws {
 
     let photoRouteController = PhotoRouteController()
     try router.register(collection: photoRouteController)
+
+    let informationController = InformationController()
+    try router.register(collection: informationController)
+
+    let questionController = QuestionController()
+    try router.register(collection: questionController)
 }
 

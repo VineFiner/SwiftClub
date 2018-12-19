@@ -25,4 +25,6 @@ struct Infomation: Content {
 extension Infomation: PostgreSQLModel {}
 extension Infomation: Migration {}
 
+extension Infomation: Parameter {}
+
 
