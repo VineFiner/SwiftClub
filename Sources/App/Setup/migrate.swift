@@ -31,10 +31,6 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: UserAuth.self, database: .psql)
 
     /// ENUM
-    migrations.add(migration: CommentType.self, database: .psql)
-    migrations.add(migration: ReplayType.self, database: .psql)
-    migrations.add(migration: VisitType.self, database: .psql)
-
     /// Club
     migrations.add(model: Subject.self, database: .psql)
     migrations.add(model: Topic.self, database: .psql)

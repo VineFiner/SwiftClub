@@ -9,16 +9,16 @@ import Vapor
 import FluentPostgreSQL
 
 enum CommentType: Int, PostgreSQLEnum, PostgreSQLMigration {
-    case topic = 0
-    case photo = 1
-    case information = 2
-    case question = 3
+    case topic = 1
+    case photo = 2
+    case information = 3
+    case question = 4
 }
 
 /// 评论表， 设计为二级评论表
 struct Comment: Content {
     var id: Int?
-    var targetType: CommentType  // 评论类型： topic | photo
+    var targetType: Int  // 评论类型： topic | photo
     var targetId: Int  // 评论目标的 id
     var userId: User.ID  // 评论人
     var content: String  // 评论内容
@@ -32,7 +32,7 @@ struct Comment: Content {
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
 
     init(targetType: CommentType = .topic, targetId: Int, userId: User.ID, content: String) {
-        self.targetType = targetType
+        self.targetType = targetType.rawValue
         self.targetId = targetId
         self.userId = userId
         self.content = content

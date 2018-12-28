@@ -7,6 +7,20 @@
 
 import Vapor
 
+struct TopicResContainer: Content {
+    var user: User
+    var topic: Topic
+    var commentCount: Int
+    var collectCount: Int
+    init(topic: Topic, user: User, commentCount: Int = 0, collectCount: Int = 0) {
+        self.topic = topic
+        self.user = user
+        self.collectCount = 0
+        self.commentCount = 0
+    }
+}
+
+
 struct TopicCommentResContainer: Content {
     var id: Int?
     var userId: User.ID  // 评论人
@@ -38,7 +52,7 @@ struct CommentReplayResContainer: Content {
     var toUavator: String? // 目标用户头像
     var commentId: Comment.ID // 评论 id
     var parentId: Replay.ID? // 父回复 id
-    var replayType: ReplayType // 回复类型
+    var replayType: Int // 回复类型
     var content: String
     var createdAt: Date?
 

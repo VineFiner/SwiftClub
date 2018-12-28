@@ -8,15 +8,6 @@
 import Vapor
 import FluentPostgreSQL
 
-struct TopicResContainer: Content {
-    var user: User
-    var topic: Topic
-    init(topic: Topic, user: User) {
-        self.topic = topic
-        self.user = user
-    }
-}
-
 struct TopicCommentReqContainer: Content {
     var topicId: Topic.ID  //
     var userId: User.ID  // 评论人

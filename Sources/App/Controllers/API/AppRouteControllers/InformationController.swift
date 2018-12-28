@@ -29,6 +29,7 @@ final class InformationController: RouteCollection {
 
 extension InformationController {
     func createInfomation(on request: Request, container: Infomation) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
         return try container.create(on: request).makeJson(on: request)
     }
 
@@ -52,7 +53,7 @@ extension InformationController {
                 let informationId = try information.requireID()
                 return try Comment
                     .query(on: request)
-                    .filter(\Comment.targetType == CommentType.information)
+                    .filter(\Comment.targetType == CommentType.information.rawValue)
                     .filter(\Comment.targetId == informationId)
                     .range(request.pageRange)
                     .join(\User.id, to: \Comment.userId)
@@ -66,7 +67,7 @@ extension InformationController {
                             }.flatten(on: request)
                     }.flatMap { results in
                         return Comment.query(on: request)
-                            .filter(\Comment.targetType == CommentType.information)
+                            .filter(\Comment.targetType == CommentType.information.rawValue)
                             .filter(\Comment.targetId == informationId)
                             .count()
                             .map(to: Paginated<InformationFullCommentResContainer>.self) { count in

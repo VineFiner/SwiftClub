@@ -37,7 +37,10 @@ struct InformationCommentResContainer: Content {
     var content: String  // 评论内容
     var createdAt: Date?
 
-    init(comment: Comment, user: User) {
+    var commentCount: Int // 评论数
+    var visitCount: Int // 浏览数
+
+    init(comment: Comment, user: User, commentCount: Int = 0, visitCount: Int = 0) {
         self.id = comment.id
         self.userId = comment.userId
         self.userName = user.name
@@ -45,6 +48,8 @@ struct InformationCommentResContainer: Content {
         self.topicId = comment.targetId
         self.content = comment.content
         self.createdAt = comment.createdAt
+        self.commentCount = commentCount
+        self.visitCount = visitCount
     }
 }
 

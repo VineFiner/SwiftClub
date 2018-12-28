@@ -9,7 +9,7 @@
 import Vapor
 import FluentPostgreSQL
 
-enum VisitType: Int, PostgreSQLEnum, PostgreSQLMigration {
+enum VisitType: Int {
     case topic = 0
     case information = 1
     case question = 2
@@ -18,7 +18,7 @@ enum VisitType: Int, PostgreSQLEnum, PostgreSQLMigration {
 struct Visit: Content {
     var id: Int?
     var targetId: Int
-    var targetType: VisitType
+    var targetType: Int
     var vistorId: User.ID
     var createdAt: Date?
     var updatedAt: Date?

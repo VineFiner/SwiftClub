@@ -58,21 +58,27 @@ extension TopicRouteController {
                 let topicId = try topic.requireID()
                 return try Comment
                     .query(on: request)
-                    .filter(\Comment.targetType == CommentType.topic)
+                    .filter(\Comment.targetType == CommentType.topic.rawValue)
                     .filter(\Comment.targetId == topicId)
                     .range(request.pageRange)
-                    .join(\User.id, to: \Comment.userId)
-                    .alsoDecode(User.self)
                     .all()
-                    .map { tuples in
-                        return tuples.map { TopicCommentResContainer(comment: $0.0, user: $0.1) }
-                    }.flatMap { comments in
+                    .flatMap(to: [TopicCommentResContainer].self, { comments in
+                        let commentFetures = comments.map { comment in
+                            return User.find(comment.userId, on: request)
+                                .unwrap(or: ApiError.init(code: .modelExisted))
+                                .map { user in
+                                    return TopicCommentResContainer(comment: comment, user: user)
+                                }
+                        }
+                        return commentFetures.flatten(on: request)
+                    })
+                    .flatMap { comments in
                         return comments.map { comment in
                             return self.fetchCommentContainer(on: request, comment: comment)
                         }.flatten(on: request)
                     }.flatMap { results in
                         return Comment.query(on: request)
-                            .filter(\Comment.targetType == CommentType.topic)
+                            .filter(\Comment.targetType == CommentType.topic.rawValue)
                             .filter(\Comment.targetId == topicId)
                             .count()
                             .map(to: Paginated<TopicFullCommentResContainer>.self) { count in
