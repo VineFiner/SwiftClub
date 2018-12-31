@@ -12,7 +12,8 @@ struct Infomation: Content {
     var id: Int?
     var title: String
     var desc: String
-    var url: String
+    var content: String? //
+    var url: String // 来源链接
     var creatorId: User.ID
     var createdAt: Date?
     var updatedAt: Date?
@@ -20,6 +21,13 @@ struct Infomation: Content {
     static var createdAtKey: TimestampKey? { return \.createdAt }
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
+}
+
+extension Infomation {
+    // 作者
+    var creator: Parent<Infomation, User> {
+        return parent(\.creatorId)
+    }
 }
 
 extension Infomation: PostgreSQLModel {}

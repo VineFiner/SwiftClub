@@ -18,10 +18,14 @@ final class InformationController: RouteCollection {
 
         /// list
         group.get("/", use: listInfomartion)
-        /// create
-        tokenAuthGroup.post(Infomation.self, at: "/", use: createInfomation)
+        /// detail
+        group.get(Infomation.parameter, use: fetchInformation)
         /// comment
         group.get(Infomation.parameter, "comments", use: listInfomationComments)
+
+        /// create
+        tokenAuthGroup.post(Infomation.self, at: "/", use: createInfomation)
+
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(InformationCommentReqContainer.self, at:"comment", use: informationAddComment)
     }
@@ -31,6 +35,19 @@ extension InformationController {
     func createInfomation(on request: Request, container: Infomation) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         return try container.create(on: request).makeJson(on: request)
+    }
+
+    func fetchInformation(on request: Request) throws -> Future<Response> {
+        return try request.parameters.next(Infomation.self).flatMap(to: InformationResContainer.self) { infor in
+            return infor
+                .creator
+                .query(on: request)
+                .first()
+                .unwrap(or: ApiError(code: .modelNotExist))
+                .map(to: InformationResContainer.self) { user in
+                    return InformationResContainer(info: infor, creator: user)
+            }
+            }.makeJson(on:request)
     }
 
     // 添加评论回复

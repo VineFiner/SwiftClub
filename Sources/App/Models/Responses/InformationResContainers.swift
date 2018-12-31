@@ -11,6 +11,7 @@ struct InformationResContainer: Content {
     var id: Int?
     var title: String
     var desc: String
+    var content: String?
     var url: String
     var creatorId: User.ID
     var creatorAvator: String?
@@ -25,6 +26,7 @@ struct InformationResContainer: Content {
         self.creatorAvator = creator.avator
         self.creatorName = creator.name
         self.createdAt = info.createdAt
+        self.content = info.content
     }
 }
 
