@@ -20,27 +20,6 @@ struct TopicResContainer: Content {
     }
 }
 
-
-struct TopicCommentResContainer: Content {
-    var id: Int?
-    var userId: User.ID  // 评论人
-    var userName: String?  // 评论人名字
-    var userAvator: String? // 评论人图片
-    var topicId: Topic.ID  // 话题 id
-    var content: String  // 评论内容
-    var createdAt: Date?
-
-    init(comment: Comment, user: User) {
-        self.id = comment.id
-        self.userId = comment.userId
-        self.userName = user.name
-        self.userAvator = user.avator
-        self.topicId = comment.targetId
-        self.content = comment.content
-        self.createdAt = comment.createdAt
-    }
-}
-
 struct CommentReplayResContainer: Content {
     var id: Int?
     // A@B
@@ -72,12 +51,4 @@ struct CommentReplayResContainer: Content {
     }
 }
 
-struct TopicFullCommentResContainer: Content {
-    var comment: TopicCommentResContainer
-    var replays: [CommentReplayResContainer]
-    init(comment: TopicCommentResContainer, replays: [CommentReplayResContainer]) {
-        self.comment = comment
-        self.replays = replays
-    }
-}
 

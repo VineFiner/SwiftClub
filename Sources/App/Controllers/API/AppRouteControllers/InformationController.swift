@@ -77,7 +77,7 @@ extension InformationController {
                     .alsoDecode(User.self)
                     .all()
                     .map { tuples in
-                        return tuples.map { InformationCommentResContainer(comment: $0.0, user: $0.1) }
+                        return tuples.map { CommentResContainer(comment: $0.0, user: $0.1) }
                     }.flatMap { comments in
                         return comments.map { comment in
                             return self.fetchCommentContainer(on: request, comment: comment)
@@ -87,14 +87,14 @@ extension InformationController {
                             .filter(\Comment.targetType == CommentType.information.rawValue)
                             .filter(\Comment.targetId == informationId)
                             .count()
-                            .map(to: Paginated<InformationFullCommentResContainer>.self) { count in
+                            .map(to: Paginated<FullCommentResContainer>.self) { count in
                                 return request.paginated(data: results, total: count)
                         }
                     }.makeJson(on:request)
         }
     }
 
-    func fetchCommentContainer(on request: Request, comment: InformationCommentResContainer) -> Future<InformationFullCommentResContainer> {
+    func fetchCommentContainer(on request: Request, comment: CommentResContainer) -> Future<FullCommentResContainer> {
         return Replay
             .query(on: request)
             .filter(\Replay.commentId == comment.id!)
@@ -106,7 +106,7 @@ extension InformationController {
                     })
                     }.flatten(on: request)
             }.map { results in
-                return InformationFullCommentResContainer(comment: comment, replays: results)
+                return FullCommentResContainer(comment: comment, replays: results)
         }
     }
 

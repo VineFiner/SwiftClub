@@ -62,12 +62,12 @@ extension TopicRouteController {
                     .filter(\Comment.targetId == topicId)
                     .range(request.pageRange)
                     .all()
-                    .flatMap(to: [TopicCommentResContainer].self, { comments in
+                    .flatMap(to: [CommentResContainer].self, { comments in
                         let commentFetures = comments.map { comment in
                             return User.find(comment.userId, on: request)
                                 .unwrap(or: ApiError.init(code: .modelExisted))
                                 .map { user in
-                                    return TopicCommentResContainer(comment: comment, user: user)
+                                    return CommentResContainer(comment: comment, user: user)
                                 }
                         }
                         return commentFetures.flatten(on: request)
@@ -81,14 +81,14 @@ extension TopicRouteController {
                             .filter(\Comment.targetType == CommentType.topic.rawValue)
                             .filter(\Comment.targetId == topicId)
                             .count()
-                            .map(to: Paginated<TopicFullCommentResContainer>.self) { count in
+                            .map(to: Paginated<FullCommentResContainer>.self) { count in
                             return request.paginated(data: results, total: count)
                         }
                     }.makeJson(on:request)
         }
     }
 
-    func fetchCommentContainer(on request: Request, comment: TopicCommentResContainer) -> Future<TopicFullCommentResContainer> {
+    func fetchCommentContainer(on request: Request, comment: CommentResContainer) -> Future<FullCommentResContainer> {
         return Replay
             .query(on: request)
             .filter(\Replay.commentId == comment.id!)
@@ -100,7 +100,7 @@ extension TopicRouteController {
                     })
                 }.flatten(on: request)
             }.map { results in
-                return TopicFullCommentResContainer(comment: comment, replays: results)
+                return FullCommentResContainer(comment: comment, replays: results)
             }
     }
 
