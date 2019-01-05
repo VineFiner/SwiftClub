@@ -20,6 +20,8 @@ final class QuestionController: RouteCollection {
         group.get("/", use: listQuestions)
         // desc
         group.get(Question.parameter, use: fetchQuestion)
+        /// comment
+        group.get(Question.parameter, "comments", use: listQuestionComments)
         /// create
         tokenAuthGroup.post(Question.self, at: "/", use: creatQuestion)
         /// comment
@@ -29,6 +31,54 @@ final class QuestionController: RouteCollection {
 }
 
 extension QuestionController {
+
+    func listQuestionComments(request: Request) throws -> Future<Response> {
+        return try request
+            .parameters
+            .next(Question.self)
+            .flatMap { question in
+                let questionId = try question.requireID()
+                return try Comment
+                    .query(on: request)
+                    .filter(\Comment.targetType == CommentType.question.rawValue)
+                    .filter(\Comment.targetId == questionId)
+                    .range(request.pageRange)
+                    .join(\User.id, to: \Comment.userId)
+                    .alsoDecode(User.self)
+                    .all()
+                    .map { tuples in
+                        return tuples.map { CommentResContainer(comment: $0.0, user: $0.1) }
+                    }.flatMap { comments in
+                        return comments.map { comment in
+                            return self.fetchCommentContainer(on: request, comment: comment)
+                            }.flatten(on: request)
+                    }.flatMap { results in
+                        return Comment.query(on: request)
+                            .filter(\Comment.targetType == CommentType.question.rawValue)
+                            .filter(\Comment.targetId == questionId)
+                            .count()
+                            .map(to: Paginated<FullCommentResContainer>.self) { count in
+                                return request.paginated(data: results, total: count)
+                        }
+                    }.makeJson(on:request)
+        }
+    }
+    
+    func fetchCommentContainer(on request: Request, comment: CommentResContainer) -> Future<FullCommentResContainer> {
+        return Replay
+            .query(on: request)
+            .filter(\Replay.commentId == comment.id!)
+            .all()
+            .flatMap { replays in
+                return replays.map { replay in
+                    return map(User.find(replay.userId, on: request), User.find(replay.toUid, on: request), { user, toUser in
+                        return CommentReplayResContainer(replay: replay, user:user!, toUser: toUser!)
+                    })
+                    }.flatten(on: request)
+            }.map { results in
+                return FullCommentResContainer(comment: comment, replays: results)
+        }
+    }
 
     // 添加评论回复
     func commentAddReplay(request: Request, replay: Replay) throws  -> Future<Response> {
