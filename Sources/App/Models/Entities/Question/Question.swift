@@ -22,5 +22,13 @@ struct Question:Content {
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
 }
 
+extension Question {
+    var creator: Parent<Question, User> {
+        return parent(\.creatorId)
+    }
+}
+
+extension Question: Parameter {}
+
 extension Question: PostgreSQLModel {}
 extension Question: Migration {}

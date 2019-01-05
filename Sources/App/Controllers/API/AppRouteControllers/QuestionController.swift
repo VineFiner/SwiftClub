@@ -19,16 +19,43 @@ final class QuestionController: RouteCollection {
 
         /// list
         group.get("/", use: listQuestions)
+        // desc
+        group.get(Question.parameter, use: fetchQuestion)
 
         /// create
         tokenAuthGroup.post(Question.self, at: "/", use: creatQuestion)
         /// comment
-        
-        
+        tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
+        tokenAuthGroup.post(QuestionCommentReqContainer.self, at:"comment", use: questionAddComment)
+
     }
 }
 
 extension QuestionController {
+
+    // 添加评论回复
+    func commentAddReplay(request: Request, replay: Replay) throws  -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try replay.create(on: request).makeJson(on: request)
+    }
+    
+    // 添加评论
+    func questionAddComment(request: Request, container: QuestionCommentReqContainer) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        let comment = Comment(targetType:.question, targetId: container.questionId, userId: container.userId, content: container.content)
+        return try comment.create(on: request).makeJson(on: request)
+    }
+
+    func fetchQuestion(_ reqeust: Request) throws -> Future<Response> {
+        return try reqeust.parameters.next(Question.self).flatMap(to: QuestionResContainer.self, { question in
+            return question.creator.query(on: reqeust)
+                .first()
+                .unwrap(or: ApiError(code: .modelExisted))
+                .map(to: QuestionResContainer.self, { user in
+                    return QuestionResContainer(user: user, question: question)
+                })
+        }).makeJson(on: reqeust)
+    }
 
     func creatQuestion(_ request: Request, question: Question) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
