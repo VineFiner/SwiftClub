@@ -16,18 +16,15 @@ final class QuestionController: RouteCollection {
         let guardAuthMiddleware = User.guardAuthMiddleware()
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
-
         /// list
         group.get("/", use: listQuestions)
         // desc
         group.get(Question.parameter, use: fetchQuestion)
-
         /// create
         tokenAuthGroup.post(Question.self, at: "/", use: creatQuestion)
         /// comment
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(QuestionCommentReqContainer.self, at:"comment", use: questionAddComment)
-
     }
 }
 
@@ -38,7 +35,7 @@ extension QuestionController {
         let _ = try request.requireAuthenticated(User.self)
         return try replay.create(on: request).makeJson(on: request)
     }
-    
+
     // 添加评论
     func questionAddComment(request: Request, container: QuestionCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
@@ -51,8 +48,13 @@ extension QuestionController {
             return question.creator.query(on: reqeust)
                 .first()
                 .unwrap(or: ApiError(code: .modelExisted))
-                .map(to: QuestionResContainer.self, { user in
-                    return QuestionResContainer(user: user, question: question)
+                .flatMap(to: QuestionResContainer.self, { user in
+                    return Comment.query(on: reqeust)
+                        .filter(\Comment.targetType == CommentType.question.rawValue)
+                        .filter(\Comment.targetId == question.id!)
+                        .count().map(to: QuestionResContainer.self, { count in
+                            return QuestionResContainer(user: user, question: question, commentCount: count)
+                        })
                 })
         }).makeJson(on: reqeust)
     }
@@ -70,8 +72,16 @@ extension QuestionController {
             .all()
             .flatMap(to: [QuestionResContainer].self, { questions in
                 let futures = questions.map { question in
-                    return User.find(question.creatorId, on: requst).unwrap(or: ApiError(code: .modelNotExist)).map { user in
-                        return QuestionResContainer(user: user, question: question)
+                    return User.find(question.creatorId, on: requst)
+                        .unwrap(or: ApiError(code: .modelNotExist))
+                        .flatMap { user in
+                        return Comment.query(on: requst)
+                            .filter(\Comment.targetType == CommentType.question.rawValue)
+                            .filter(\Comment.targetId == question.id!)
+                            .count()
+                            .map(to: QuestionResContainer.self, { count in
+                                return QuestionResContainer(user: user, question: question, commentCount: count)
+                            })
                     }
                 }
                 return futures.flatten(on: requst)
