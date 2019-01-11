@@ -86,7 +86,7 @@ public final class APIErrorMiddleware: Middleware, Service, ServiceType {
                 apiError.headers.forEach { name, value in
                     headers.add(name: name, value: value)
                 }
-                status = apiError.code.rawValue
+                status = apiError.code.code
 
             case let abort as AbortError:
                 // We have an `AbortError` which has both a

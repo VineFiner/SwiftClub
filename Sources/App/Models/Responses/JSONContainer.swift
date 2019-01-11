@@ -7,57 +7,28 @@
 
 import Vapor
 
-enum ResponseStatus: UInt, Content {
-    case ok = 0  // 请求成功状态
+struct ResponseStatus: Content {
+    var code: UInt
+    var desc: String
+
+
+    static var ok = ResponseStatus(code: 0, desc: "请求成功")
+
 
     /// 接口失败
-    case userExist = 20
-    case userNotExist = 21
-    case passwordError = 22
-    case emailNotExist = 23
-    case bookNotExist = 24
-    case modelNotExist = 25
-    case modelExisted = 26
-    case authFail = 27
-    case codeFail = 28
-    case resonNotExist = 29
-    case base64DecodeError = 30
-
-    case custom = 31
-    case refreshTokenNotExist = 32
-
-    var desc: String {
-        switch self {
-        case .ok:
-            return "请求成功"
-        case .userExist:
-            return "用户已经存在"
-        case .userNotExist:
-            return "用户不存在"
-        case .passwordError:
-            return "密码错误"
-        case .emailNotExist:
-            return "邮箱不存在"
-        case .bookNotExist:
-            return "书籍不存在"
-        case .modelNotExist:
-            return "对象不存在"
-        case .modelExisted:
-            return "对象已存在"
-        case .authFail:
-            return "认证失败"
-        case .codeFail:
-            return "验证码错误"
-        case .resonNotExist:
-            return "不存在reason"
-        case .base64DecodeError:
-            return "base64 decode 失败"
-        case .custom:
-            return "出错了"
-        case .refreshTokenNotExist:
-            return "refreshToken 不存在"
-        }
-    }
+    static var userExist = ResponseStatus(code: 20, desc: "用户已经存在")
+    static var userNotExist = ResponseStatus(code: 21, desc: "用户不存在")
+    static var passwordError = ResponseStatus(code: 22, desc: "密码错误")
+    static var emailNotExist = ResponseStatus(code: 23, desc: "邮箱不存在")
+    static var bookNotExist = ResponseStatus(code: 24, desc: "书籍不存在")
+    static var modelNotExist = ResponseStatus(code: 25, desc: "对象不存在")
+    static var modelExisted = ResponseStatus(code: 26, desc: "对象已存在")
+    static var authFail = ResponseStatus(code: 27, desc: "认证失败")
+    static var codeFail = ResponseStatus(code: 28, desc: "验证码错误")
+    static var resonNotExist = ResponseStatus(code: 29, desc: "不存在reason")
+    static var base64DecodeError = ResponseStatus(code: 30, desc: "base64 decode 失败")
+    static var custom = ResponseStatus(code: 31, desc: "出错了")
+    static var refreshTokenNotExist = ResponseStatus(code: 32, desc: "refreshToken 不存在")
 }
 
 struct Empty: Content {}

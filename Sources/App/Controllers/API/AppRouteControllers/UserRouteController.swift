@@ -29,7 +29,28 @@ final class UserRouteController: RouteCollection {
         // 微信小程序
         // /oauth/token 通过小程序提供的验证信息获取服务器自己的 token
         group.post(UserWxAppOauthReqContainer.self, at: "/oauth/token", use: wxappOauthToken)
+
+        /// 添加关注
+        group.post( Follower.self, at:"follow", use: followUser);
     }
+}
+
+extension UserRouteController {
+    func followUser(_ request: Request, container: Follower) throws -> Future<Response> {
+        //
+        return Follower.query(on: request)
+            .filter(\Follower.userId == container.userId)
+            .filter(\Follower.followedId == container.followedId)
+            .count()
+            .flatMap { count in
+                if (count > 0) { // 已关注
+                    throw ApiError(code: .custom)
+                }else {
+                    return try container.create(on: request).makeJson(on: request)
+                }
+            }
+    }
+
 }
 
 //MARK: Helper

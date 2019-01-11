@@ -15,7 +15,7 @@ struct ApiError: Debuggable {
     var code: Code
 
     init(code: Code, message: String? = nil) {
-        self.identifier = "api error: \(code.rawValue)"
+        self.identifier = "api error: \(code.code)"
         self.reason = message ?? code.desc
         self.code = code
     }
