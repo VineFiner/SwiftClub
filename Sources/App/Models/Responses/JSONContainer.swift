@@ -7,14 +7,12 @@
 
 import Vapor
 
+/// 封装成 struct 优于 enum.
 struct ResponseStatus: Content {
     var code: UInt
     var desc: String
 
-
     static var ok = ResponseStatus(code: 0, desc: "请求成功")
-
-
     /// 接口失败
     static var userExist = ResponseStatus(code: 20, desc: "用户已经存在")
     static var userNotExist = ResponseStatus(code: 21, desc: "用户不存在")
@@ -29,6 +27,12 @@ struct ResponseStatus: Content {
     static var base64DecodeError = ResponseStatus(code: 30, desc: "base64 decode 失败")
     static var custom = ResponseStatus(code: 31, desc: "出错了")
     static var refreshTokenNotExist = ResponseStatus(code: 32, desc: "refreshToken 不存在")
+
+
+    // 用于修改
+    mutating func message(_ str: String) {
+        self.desc = str
+    }
 }
 
 struct Empty: Content {}

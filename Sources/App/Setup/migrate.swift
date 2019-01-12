@@ -30,6 +30,9 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Subscription.self, database: .psql)
     migrations.add(model: UserAuth.self, database: .psql)
 
+    /// user
+    migrations.add(model: Follower.self, database: .psql)
+
     /// ENUM
     /// Club
     migrations.add(model: Subject.self, database: .psql)
