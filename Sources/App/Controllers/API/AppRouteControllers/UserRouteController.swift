@@ -12,9 +12,9 @@ import CNIOOpenSSL
 
 final class UserRouteController: RouteCollection {
     private let authService = AuthenticationService()
+    private let notifyService = NotifyService()
     func boot(router: Router) throws {
         let group = router.grouped("api", "users")
-        
         group.post(EmailLoginReqContainer.self, at: "login", use: loginUserHandler)
         group.post(UserRegisterReqContainer.self, at: "register", use: registerUserHandler)
         /// 修改密码 
@@ -30,14 +30,20 @@ final class UserRouteController: RouteCollection {
         // /oauth/token 通过小程序提供的验证信息获取服务器自己的 token
         group.post(UserWxAppOauthReqContainer.self, at: "/oauth/token", use: wxappOauthToken)
 
+        let guardAuthMiddleware = User.guardAuthMiddleware()
+        let tokenAuthMiddleware = User.tokenAuthMiddleware()
+        let tokenAuthGroup = router.grouped("api", "user")
+            .grouped([tokenAuthMiddleware, guardAuthMiddleware])
         /// 添加关注
-        group.post( Follower.self, at:"follow", use: followUser);
+        tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
     }
 }
 
+
 extension UserRouteController {
+    //
     func followUser(_ request: Request, container: Follower) throws -> Future<Response> {
-        //
+         let _ = try request.requireAuthenticated(User.self)
         return Follower.query(on: request)
             .filter(\Follower.userId == container.userId)
             .filter(\Follower.followedId == container.followedId)
@@ -46,7 +52,12 @@ extension UserRouteController {
                 if (count > 0) { // 已关注
                     throw ApiError(code: .custom)
                 }else {
-                    return try container.create(on: request).makeJson(on: request)
+                    return container
+                        .create(on: request)
+                        .flatMap { follwer in
+                        return try self.notifyService
+                            .subscribe(userId: follwer.userId, target: follwer.followedId, targetType: .user, reason: .likeUser, on: request)
+                        }
                 }
             }
     }

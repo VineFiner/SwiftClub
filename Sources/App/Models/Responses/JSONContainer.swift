@@ -38,7 +38,7 @@ struct ResponseStatus: Content {
 struct Empty: Content {}
 
 struct JSONContainer<D: Content>: Content {
-    private var status: ResponseStatus
+    private var status: UInt
     private var message: String
     private var data: D?
 
@@ -47,14 +47,14 @@ struct JSONContainer<D: Content>: Content {
     }
 
     init(data:D? = nil) {
-        self.status = .ok
-        self.message = self.status.desc
+        self.status = ResponseStatus.ok.code
+        self.message = ResponseStatus.ok.desc
         self.data = data
     }
 
     init(data: D) {
-        self.status = .ok
-        self.message = status.desc
+        self.status = ResponseStatus.ok.code
+        self.message = ResponseStatus.ok.desc
         self.data = data
     }
 

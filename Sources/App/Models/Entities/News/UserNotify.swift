@@ -12,7 +12,7 @@ import Pagination
 /// 新建信息(Message)之后，立刻创建。
 final class UserNotify: Content {
     var id: Int?
-    var userId: User.ID
+    var userId: User.ID  // 用户消息所属者
     var notifyId: Notify.ID
     var notifyType: Int
     var isRead: Bool

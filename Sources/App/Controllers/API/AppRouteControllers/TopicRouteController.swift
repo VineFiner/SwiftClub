@@ -46,7 +46,14 @@ extension TopicRouteController {
     func topicAddComment(request: Request, container: TopicCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         let comment = Comment(targetId: container.topicId, userId: container.userId, content: container.content)
-        return try comment.create(on: request).makeJson(on: request)
+        return try comment.create(on: request)
+            .flatMap (to: Comment.self,{ comment in
+                let futera = try self.notifyService.createRemind(target: comment.id!, targetType: .user, action: .comment, sender: comment.userId, content: comment.content, on: request)
+                let futerb = try self.notifyService.createRemind(target: comment.id!, targetType: .topic, action: .commented, sender: comment.userId, content: comment.content, on: request)
+                return map(futera, futerb, { a, b in
+                    return comment
+                })
+            }).makeJson(on: request)
     }
 
     // 获取话题的评论数据， 不支持左连接
@@ -164,9 +171,11 @@ extension TopicRouteController {
 
     func topicAdd(request: Request, container: Topic) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self) // 获取到当前用户
-        return try container
+        return container
             .create(on: request)
-            .makeJson(on: request)
+            .flatMap { topic in
+                return try self.notifyService.createRemind(target: topic.id!, targetType: .user, action: .post, sender: topic.userId, content: topic.title, on: request)
+            }
     }
 }
 

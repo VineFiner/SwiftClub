@@ -12,6 +12,48 @@ import Fluent
 import FluentPostgreSQL
 import Pagination
 
+
+extension NotifyService {
+    enum TargetType: String {
+        case user = "user"
+        case question = "question"
+        case topic = "topic"
+    }
+
+    enum Action: String {
+        case like = "like"      // 喜欢
+        case comment = "comment" // 评论
+        case post = "post" // 发布
+
+        case liked = "liked" // 被喜欢
+        case commented = "commented" // 被评论
+    }
+
+    enum Reason: String {
+        case likeUser = "likeUser" // 关注用户
+        case likeTopic = "likeTopic" // 关注文章
+        case likeQuestion = "likeQuestion" // 关注的问题
+
+        var actions: [Action] {
+            switch self {
+            case .likeUser:
+                return [.like, .comment, .post]
+            case .likeTopic:
+                return [.comment, .like]
+            case .likeQuestion:
+                return [.comment, .like]
+            }
+        }
+    }
+    // 自己创建的文章|问答被评论
+    // 自己创建的文章|问答被收藏
+    // 自己被粉丝关注
+
+    // 关注的人发布文章|问答
+    // 关注的人对文章|问答进行评论
+    // 关注的人对文章|问答进行收藏
+}
+
 final class NotifyService {
 
     /// MARK - Create
@@ -22,23 +64,22 @@ final class NotifyService {
     }
 
     /// 往Notify表中插入一条提醒记录
-    func createRemind(target: Int, targetType: String, action: String, sender: User.ID, content: String, on reqeust: Request) throws -> Future<Response> {
-        let notify = Notify(type: Notify.remind, target: target, targetType: targetType, action: action, sender: sender, content: content)
+    func createRemind(target: Int, targetType: TargetType, action: Action, sender: User.ID, content: String, on reqeust: Request) throws -> Future<Response> {
+        let notify = Notify(type: Notify.remind, target: target, targetType: targetType.rawValue, action: action.rawValue, sender: sender, content: content)
         return try notify.create(on: reqeust).makeJson(on: reqeust)
     }
 
     /// 往Notify表中插入一条信息记录
     /// 往UserNotify表中插入一条记录，并关联新建的Notify
-    func createMessage(content: String, sender: User.ID, receiver: User.ID, on reqeust: Request) throws -> Future<Response> {
-        let notify = Notify(type: Notify.message, target: nil, targetType: nil, action: nil, sender: sender, content: content)
-        return notify
+    func createMessage(content: String, senderId: User.ID, receiverId: User.ID, on reqeust: Request) throws -> Future<Response> {
+        let notify = Notify(type: Notify.message, target: nil, targetType: nil, action: nil, sender: senderId, content: content)
+        return try notify
             .create(on: reqeust)
-            .flatMap { (noti) in
+            .flatMap(to: UserNotify.self , { noti in
                 let notid = try noti.requireID()
-                let userNotify = UserNotify(userId: sender, notifyId: notid, notifyType: noti.type)
-                let _ = userNotify.create(on: reqeust)
-                return try reqeust.makeJson(noti)
-            }
+                let userNotify = UserNotify(userId: receiverId, notifyId: notid, notifyType: noti.type)
+                return userNotify.create(on: reqeust)
+            }).makeJson(on: reqeust)
     }
 
     ///MARK - Accessible
@@ -147,26 +188,21 @@ final class NotifyService {
 
     /// 通过reason，查询reasonAction，获取对应的动作组:actions
     /// 遍历动作组，每一个动作新建一则Subscription记录
-    func subscribe(user: User.ID, target: Int, targetType: String, reason: String, on reqeust: Request) throws -> Future<Response>{
-        let reasonAction: [String: [String]] = [
-            "create_topic": ["like", "comment"],
-            "like_replay": ["comment"]
-        ]
-        guard let actions = reasonAction[reason] else {throw ApiError(code: .resonNotExist)}
+    func subscribe(userId: User.ID, target: Int, targetType: TargetType, reason: Reason, on reqeust: Request) throws -> Future<Response>{
 
-        let futures = actions.map { action -> EventLoopFuture<Void> in
-            let subscribe = Subscription(target: target, targetType: targetType, userId: user, action: action)
+        let futures = reason.actions.map { action -> EventLoopFuture<Void> in
+            let subscribe = Subscription(target: target, targetType: targetType.rawValue, userId: userId, action: action.rawValue)
             return subscribe.create(on: reqeust).map(to: Void.self, { _ in return})
         }
         return try Future<Void>.andAll(futures, eventLoop: reqeust.eventLoop).makeJson(request: reqeust)
     }
 
     //// 删除user、target、targetType对应的一则或多则记录
-    func cancelSubscription(userId: User.ID, target: Int, targetType: String, on reqeust: Request) throws -> Future<Response> {
+    func cancelSubscription(userId: User.ID, target: Int, targetType: TargetType, on reqeust: Request) throws -> Future<Response> {
         return try Subscription.query(on: reqeust)
             .filter(\.userId == userId)
             .filter(\.target == target)
-            .filter(\.targetType == targetType)
+            .filter(\.targetType == targetType.rawValue)
             .delete()
             .makeJson(request: reqeust)
     }
