@@ -57,7 +57,7 @@ extension TopicRouteController {
             .create(on: request)
             .flatMap { collect -> EventLoopFuture<Collect> in // 且被添加订阅
                 let futrz = try self.notifyService.subscribe(userId: collect.collectorId, target: collect.targetId, targetType: .topic , reason: .likeTopic, on: request)
-                let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .topic, action: .like, sender: collect.collectorId, content: "收藏", on: request)
+                let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .topic, action: .like, sender: collect.collectorId, content: collect.targetName, on: request)
                 return map(futrz, futera, { a, b in
                     return collect
                 })

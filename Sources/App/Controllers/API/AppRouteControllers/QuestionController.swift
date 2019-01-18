@@ -54,7 +54,7 @@ extension QuestionController {
             .create(on: request)
             .flatMap { collect -> EventLoopFuture<Collect> in // 且被添加订阅
             let futrz = try self.notifyService.subscribe(userId: collect.collectorId, target: collect.targetId, targetType: .question , reason: .likeQuestion, on: request)
-            let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .question, action: .like, sender: collect.collectorId, content: "收藏", on: request)
+            let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .question, action: .like, sender: collect.collectorId, content: collect.targetName, on: request)
             return map(futrz,futera, { a, b in
                 return collect
             })
@@ -146,7 +146,7 @@ extension QuestionController {
         let _ = try request.requireAuthenticated(User.self)
         return question.create(on: request).flatMap { quest in
             /// xxx发布了 这个 xxx topic，标题是 xxx
-            return try self.notifyService.createRemind(target: quest.id!, targetType: .question, action: .post, sender: quest.creatorId, content: quest.title, on: request)
+            return try self.notifyService.createRemind(target: quest.requireID(), targetType: .question, action: .post, sender: quest.creatorId, content: quest.title, on: request)
         }
     }
 

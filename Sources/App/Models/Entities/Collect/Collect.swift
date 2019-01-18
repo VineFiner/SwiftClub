@@ -5,8 +5,6 @@
 //  Created by laijihua on 2019/1/18.
 //
 
-
-
 import Vapor
 import FluentPostgreSQL
 
@@ -21,6 +19,7 @@ struct Collect: Content {
     var collectorId: User.ID
     var targetId: Int // 收藏物主键
     var targetType: String // 收藏物类型 CollectType
+    var targetName:String // 冗余字段，收藏物的名字
 
     var createdAt: Date?
     var updatedAt: Date?
@@ -28,12 +27,6 @@ struct Collect: Content {
     static var createdAtKey: TimestampKey? { return \.createdAt }
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
-
-    init(userId: User.ID, targetType:CollectType, targetId: Int) {
-        self.collectorId = userId;
-        self.targetType = targetType.rawValue
-        self.targetId = targetId
-    }
 }
 
 extension Collect: Migration {}

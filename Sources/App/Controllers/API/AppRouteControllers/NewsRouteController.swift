@@ -18,8 +18,8 @@ final class NewsRouteController: RouteCollection {
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
-        tokenAuthGroup.get("list", use: listNews)
-//        tokenAuthGroup.get("newer", use: hasNewerNews)
+        tokenAuthGroup.get("dynamic", use: listNews) // 用户动态， 我主动的操作
+        tokenAuthGroup.get("list", use: listNews) // 用户消息，订阅的事件，被动的
     }
 }
 
