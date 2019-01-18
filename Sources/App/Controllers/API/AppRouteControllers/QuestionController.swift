@@ -11,6 +11,7 @@ import FluentPostgreSQL
 import Pagination
 
 final class QuestionController: RouteCollection {
+    let notifyService = NotifyService()
     func boot(router: Router) throws {
         let group = router.grouped("api", "question")
         let guardAuthMiddleware = User.guardAuthMiddleware()
@@ -90,7 +91,18 @@ extension QuestionController {
     func questionAddComment(request: Request, container: QuestionCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         let comment = Comment(targetType:.question, targetId: container.questionId, userId: container.userId, content: container.content)
-        return try comment.create(on: request).makeJson(on: request)
+        return try comment.create(on: request)
+            .flatMap (to: Comment.self,{ comment in
+                /// xxx 用户评论了xxx问题，评论内容是 xxx
+                let futera = try self.notifyService.createRemind(target: comment.targetId, targetType: .question, action: .comment, sender: comment.userId, content: comment.content, on: request)
+
+                /// 这个xx问题被xx评论了，评论内容是xxx
+                let futerb = try self.notifyService.createRemind(target: comment.targetId, targetType: .question, action: .commented, sender: comment.userId, content: comment.content, on: request)
+
+                return map(futera, futerb, { a, b in
+                    return comment
+                })
+            }).makeJson(on: request)
     }
 
     func fetchQuestion(_ reqeust: Request) throws -> Future<Response> {
@@ -111,7 +123,10 @@ extension QuestionController {
 
     func creatQuestion(_ request: Request, question: Question) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
-        return try question.create(on: request).makeJson(on: request)
+        return question.create(on: request).flatMap { quest in
+            /// xxx发布了 这个 xxx topic，标题是 xxx
+            return try self.notifyService.createRemind(target: quest.id!, targetType: .question, action: .post, sender: quest.creatorId, content: quest.title, on: request)
+        }
     }
 
     func listQuestions(_ requst: Request) throws -> Future<Response> {

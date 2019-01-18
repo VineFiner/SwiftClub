@@ -48,8 +48,10 @@ extension TopicRouteController {
         let comment = Comment(targetId: container.topicId, userId: container.userId, content: container.content)
         return try comment.create(on: request)
             .flatMap (to: Comment.self,{ comment in
-                let futera = try self.notifyService.createRemind(target: comment.id!, targetType: .user, action: .comment, sender: comment.userId, content: comment.content, on: request)
-                let futerb = try self.notifyService.createRemind(target: comment.id!, targetType: .topic, action: .commented, sender: comment.userId, content: comment.content, on: request)
+
+                /// 如果是关注了博客就commented， 如果关注了用户就是 .comment
+                let futera = try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .comment, sender: comment.userId, content: comment.content, on: request)
+                let futerb = try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .commented, sender: comment.userId, content: comment.content, on: request)
                 return map(futera, futerb, { a, b in
                     return comment
                 })
@@ -174,7 +176,8 @@ extension TopicRouteController {
         return container
             .create(on: request)
             .flatMap { topic in
-                return try self.notifyService.createRemind(target: topic.id!, targetType: .user, action: .post, sender: topic.userId, content: topic.title, on: request)
+                /// xxx发布了 这个 xxx topic，标题是 xxx
+                return try self.notifyService.createRemind(target: topic.id!, targetType: .topic, action: .post, sender: topic.userId, content: topic.title, on: request)
             }
     }
 }
