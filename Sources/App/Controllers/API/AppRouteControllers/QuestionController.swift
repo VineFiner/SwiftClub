@@ -23,6 +23,9 @@ final class QuestionController: RouteCollection {
         group.get(Question.parameter, use: fetchQuestion)
         /// comment
         group.get(Question.parameter, "comments", use: listQuestionComments)
+        /// collect
+        tokenAuthGroup.post(Collect.self, at:"collect", use: questionCollect)
+        tokenAuthGroup.post(Collect.self, at:"uncollect", use: questionUncollect)
         /// create
         tokenAuthGroup.post(Question.self, at: "/", use: creatQuestion)
         /// comment
@@ -32,6 +35,31 @@ final class QuestionController: RouteCollection {
 }
 
 extension QuestionController {
+
+    func questionUncollect(request: Request, container: Collect) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return Collect.query(on: request)
+            .filter(\Collect.targetType == container.targetType)
+            .filter(\Collect.targetId == container.targetId)
+            .filter(\Collect.collectorId == container.collectorId)
+            .delete()
+            .flatMap { _ in
+                return try self.notifyService.cancelSubscription(userId: container.collectorId, target: container.targetId, targetType: .question, on: request)
+            }
+    }
+
+    func questionCollect(request: Request, container: Collect) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try container
+            .create(on: request)
+            .flatMap { collect -> EventLoopFuture<Collect> in // 且被添加订阅
+            let futrz = try self.notifyService.subscribe(userId: collect.collectorId, target: collect.targetId, targetType: .question , reason: .likeQuestion, on: request)
+            let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .question, action: .like, sender: collect.collectorId, content: "收藏", on: request)
+            return map(futrz,futera, { a, b in
+                return collect
+            })
+        }.makeJson(on: request)
+    }
 
     func listQuestionComments(request: Request) throws -> Future<Response> {
         return try request
@@ -91,18 +119,11 @@ extension QuestionController {
     func questionAddComment(request: Request, container: QuestionCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         let comment = Comment(targetType:.question, targetId: container.questionId, userId: container.userId, content: container.content)
-        return try comment.create(on: request)
-            .flatMap (to: Comment.self,{ comment in
+        return comment.create(on: request)
+            .flatMap { comment in
                 /// xxx 用户评论了xxx问题，评论内容是 xxx
-                let futera = try self.notifyService.createRemind(target: comment.targetId, targetType: .question, action: .comment, sender: comment.userId, content: comment.content, on: request)
-
-                /// 这个xx问题被xx评论了，评论内容是xxx
-                let futerb = try self.notifyService.createRemind(target: comment.targetId, targetType: .question, action: .commented, sender: comment.userId, content: comment.content, on: request)
-
-                return map(futera, futerb, { a, b in
-                    return comment
-                })
-            }).makeJson(on: request)
+                return try self.notifyService.createRemind(target: comment.targetId, targetType: .question, action: .comment, sender: comment.userId, content: comment.content, on: request)
+            }
     }
 
     func fetchQuestion(_ reqeust: Request) throws -> Future<Response> {

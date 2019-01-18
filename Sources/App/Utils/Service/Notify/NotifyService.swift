@@ -24,8 +24,8 @@ extension NotifyService {
         case like = "like"      // 喜欢 | 收藏
         case comment = "comment" // 评论
         case post = "post" // 发布
-        case liked = "liked" // 被喜欢
-        case commented = "commented" // 被评论
+//        case liked = "liked" // 被喜欢
+//        case commented = "commented" // 被评论
     }
 
     enum Reason: String {

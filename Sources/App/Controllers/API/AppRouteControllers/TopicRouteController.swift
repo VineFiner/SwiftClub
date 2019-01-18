@@ -27,6 +27,9 @@ final class TopicRouteController: RouteCollection {
         group.get(Topic.parameter, use: topicFetch) // topic 详情
         group.get(Topic.parameter, "comments", use: topicComments)
 
+        tokenAuthGroup.post(Collect.self, at:"collect", use: topicCollect)
+        tokenAuthGroup.post(Collect.self, at:"uncollect", use: topicUncollect)
+
         tokenAuthGroup.post(TopicCommentReqContainer.self, at:"comment", use: topicAddComment)
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
@@ -35,6 +38,31 @@ final class TopicRouteController: RouteCollection {
 
 
 extension TopicRouteController {
+
+    func topicUncollect(request: Request, container: Collect) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return Collect.query(on: request)
+            .filter(\Collect.targetType == container.targetType)
+            .filter(\Collect.targetId == container.targetId)
+            .filter(\Collect.collectorId == container.collectorId)
+            .delete()
+            .flatMap { _ in
+                return try self.notifyService.cancelSubscription(userId: container.collectorId, target: container.targetId, targetType: .topic, on: request)
+            }
+    }
+
+    func topicCollect(request: Request, container: Collect) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try container
+            .create(on: request)
+            .flatMap { collect -> EventLoopFuture<Collect> in // 且被添加订阅
+                let futrz = try self.notifyService.subscribe(userId: collect.collectorId, target: collect.targetId, targetType: .topic , reason: .likeTopic, on: request)
+                let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .topic, action: .like, sender: collect.collectorId, content: "收藏", on: request)
+                return map(futrz, futera, { a, b in
+                    return collect
+                })
+            }.makeJson(on: request)
+    }
 
     // 添加评论回复
     func commentAddReplay(request: Request, replay: Replay) throws  -> Future<Response> {
@@ -46,16 +74,13 @@ extension TopicRouteController {
     func topicAddComment(request: Request, container: TopicCommentReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         let comment = Comment(targetId: container.topicId, userId: container.userId, content: container.content)
-        return try comment.create(on: request)
-            .flatMap (to: Comment.self,{ comment in
+        return comment
+            .create(on: request)
+            .flatMap { comment in
 
                 /// 如果是关注了博客就commented， 如果关注了用户就是 .comment
-                let futera = try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .comment, sender: comment.userId, content: comment.content, on: request)
-                let futerb = try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .commented, sender: comment.userId, content: comment.content, on: request)
-                return map(futera, futerb, { a, b in
-                    return comment
-                })
-            }).makeJson(on: request)
+                return try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .comment, sender: comment.userId, content: comment.content, on: request)
+            }
     }
 
     // 获取话题的评论数据， 不支持左连接

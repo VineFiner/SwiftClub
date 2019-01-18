@@ -10,7 +10,6 @@
 import Vapor
 import FluentPostgreSQL
 
-
 enum CollectType: String {
     case topic
     case question

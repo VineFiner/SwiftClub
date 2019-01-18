@@ -36,14 +36,26 @@ final class UserRouteController: RouteCollection {
             .grouped([tokenAuthMiddleware, guardAuthMiddleware])
         /// 添加关注
         tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
+        tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser);
     }
 }
 
 
 extension UserRouteController {
+
+    func unFollowUser(_ request: Request, container: Follower) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return Follower.query(on: request)
+            .filter(\Follower.userId == container.userId)
+            .filter(\Follower.followedId == container.followedId)
+            .delete()
+            .flatMap {
+                return try self.notifyService.cancelSubscription(userId: container.userId, target: container.followedId, targetType: NotifyService.TargetType.user, on: request)
+            }
+    }
     //
     func followUser(_ request: Request, container: Follower) throws -> Future<Response> {
-         let _ = try request.requireAuthenticated(User.self)
+        let _ = try request.requireAuthenticated(User.self)
         return Follower.query(on: request)
             .filter(\Follower.userId == container.userId)
             .filter(\Follower.followedId == container.followedId)
@@ -52,12 +64,17 @@ extension UserRouteController {
                 if (count > 0) { // 已关注
                     throw ApiError(code: .custom)
                 }else {
-                    return container
+                    return try container
                         .create(on: request)
-                        .flatMap { follwer in
-                        return try self.notifyService
-                            .subscribe(userId: follwer.userId, target: follwer.followedId, targetType: .user, reason: .likeUser, on: request)
-                        }
+                        .flatMap { follwer -> EventLoopFuture<Follower> in
+                            let futa = try self.notifyService
+                                .subscribe(userId: follwer.userId, target: follwer.followedId, targetType: .user, reason: .likeUser, on: request)
+                            let futb = try self.notifyService.createRemind(target: follwer.followedId, targetType: .user, action: .like, sender: follwer.userId, content: "关注", on:  request)
+
+                            return map(futa, futb, { a, b in
+                                return follwer
+                            })
+                        }.makeJson(on: request)
                 }
             }
     }
