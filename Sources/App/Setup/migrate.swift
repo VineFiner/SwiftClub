@@ -44,26 +44,10 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Infomation.self, database: .psql)
     migrations.add(model: Question.self, database: .psql)
     migrations.add(model: Visit.self, database: .psql)
-
-
-//// ==========================================
-    /// Photo
-    migrations.add(model: PhotoCategory.self, database: .psql)
-    migrations.add(model: Photo.self, database: .psql)
-    migrations.add(model: PhotoComment.self, database: .psql)
-    migrations.add(model: PhotoCollection.self, database: .psql)
-
-    /// Mini
-    migrations.add(model: Mini.self, database: .psql)
-    migrations.add(model: MiniTag.self, database: .psql)
-    migrations.add(model: MiniTagPivot.self, database: .psql)
-
     // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
     migrations.add(migration: PopulateMenuForms.self, database: .psql)
     migrations.add(migration: PopulateSubjectForms.self, database: .psql)
-    migrations.add(migration: PopulatePhotoCategoryForms.self, database: .psql)
-
     // 添加字段, 如果你是最新的项目，那么下面的进行注释
     //migrations.add(migration: SubjectAddIcon.self, database: .psql)
 }

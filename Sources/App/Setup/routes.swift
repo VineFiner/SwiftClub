@@ -46,9 +46,6 @@ public func routes(_ router: Router) throws {
     let topicRouteController = TopicRouteController()
     try router.register(collection: topicRouteController)
 
-    let photoRouteController = PhotoRouteController()
-    try router.register(collection: photoRouteController)
-
     let informationController = InformationController()
     try router.register(collection: informationController)
 
