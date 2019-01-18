@@ -43,6 +43,7 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: TopicTag.self , database: .psql)
     migrations.add(model: Infomation.self, database: .psql)
     migrations.add(model: Question.self, database: .psql)
+    migrations.add(model: Collect.self, database: .psql)
     migrations.add(model: Visit.self, database: .psql)
     // Populate 预填充
     migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
