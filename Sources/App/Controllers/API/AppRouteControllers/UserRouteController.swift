@@ -9,6 +9,7 @@ import Vapor
 import Crypto
 import FluentPostgreSQL
 import CNIOOpenSSL
+import Pagination
 
 final class UserRouteController: RouteCollection {
     private let authService = AuthenticationService()
@@ -30,18 +31,93 @@ final class UserRouteController: RouteCollection {
         // /oauth/token 通过小程序提供的验证信息获取服务器自己的 token
         group.post(UserWxAppOauthReqContainer.self, at: "/oauth/token", use: wxappOauthToken)
 
+
+        //// 用户接口
         let guardAuthMiddleware = User.guardAuthMiddleware()
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
-        let tokenAuthGroup = router.grouped("api", "user")
-            .grouped([tokenAuthMiddleware, guardAuthMiddleware])
+
+        let userGroup = router.grouped("api", "user")
+        let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
+        /// 用户信息
+        userGroup.get(User.parameter, use: fetchUserInfo)
+
         /// 添加关注
         tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
         tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser);
+        /// 获取关注我的
+        tokenAuthGroup.get("fans", use: fetchFans)
+        /// 我关注的
+        tokenAuthGroup.get("follows", use:  fetchFollowings)
+
+        /// 我的评论
+        
+
+        /// 我的发布
+
+        /// 我的收藏
+        /// 我收藏的文章，我收藏的问题， 我收藏的回答
+
+
     }
 }
 
 
 extension UserRouteController {
+
+    /// 获取用户信息
+    func fetchUserInfo(request: Request) throws -> Future<Response> {
+        return try request.parameters.next(User.self).makeJson(on: request)
+    }
+
+    func fetchFans(_ request: Request) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try Follower
+            .query(on: request)
+            .filter(\Follower.followedId == userId)
+            .range(request.pageRange)
+            .all()
+            .flatMap (to: [User].self,{ fans in
+                let futurs = fans.map { fan in
+                    return User
+                        .find(fan.userId, on: request)
+                        .unwrap(or: ApiError(code: .userNotExist))
+                }
+                return futurs.flatten(on: request)
+            }).flatMap { results in
+                return Follower.query(on: request)
+                    .filter(\Follower.followedId == userId)
+                    .count()
+                    .map(to: Paginated<User>.self) { count in
+                    return request.paginated(data: results, total: count)
+                }
+            }.makeJson(on: request)
+    }
+
+    func fetchFollowings(_ request: Request) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try Follower
+            .query(on: request)
+            .filter(\Follower.userId == userId)
+            .range(request.pageRange)
+            .all()
+            .flatMap (to: [User].self,{ fans in
+                let futurs = fans.map { fan in
+                    return User
+                        .find(fan.userId, on: request)
+                        .unwrap(or: ApiError(code: .userNotExist))
+                }
+                return futurs.flatten(on: request)
+            }).flatMap { results in
+                return Follower.query(on: request)
+                    .filter(\Follower.followedId == userId)
+                    .count()
+                    .map(to: Paginated<User>.self) { count in
+                        return request.paginated(data: results, total: count)
+                }
+            }.makeJson(on: request)
+    }
 
     func unFollowUser(_ request: Request, container: Follower) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)

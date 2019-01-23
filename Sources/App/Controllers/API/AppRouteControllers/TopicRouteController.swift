@@ -27,9 +27,11 @@ final class TopicRouteController: RouteCollection {
         group.get(Topic.parameter, use: topicFetch) // topic 详情
         group.get(Topic.parameter, "comments", use: topicComments)
 
+        /// 收藏
         tokenAuthGroup.post(Collect.self, at:"collect", use: topicCollect)
         tokenAuthGroup.post(Collect.self, at:"uncollect", use: topicUncollect)
 
+        /// 评论
         tokenAuthGroup.post(TopicCommentReqContainer.self, at:"comment", use: topicAddComment)
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
