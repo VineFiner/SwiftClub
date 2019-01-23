@@ -39,7 +39,7 @@ final class UserRouteController: RouteCollection {
         let userGroup = router.grouped("api", "user")
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
         /// 用户信息
-        userGroup.get(User.parameter, use: fetchUserInfo)
+        userGroup.get(User.parameter, "info", use: fetchUserInfo)
 
         /// 添加关注
         tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
