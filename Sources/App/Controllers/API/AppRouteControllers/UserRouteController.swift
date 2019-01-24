@@ -44,19 +44,52 @@ final class UserRouteController: RouteCollection {
         userGroup.get(User.parameter, "topics", use: fetchUserTopics)
         /// 用户问答
         userGroup.get(User.parameter, "questions", use: fetchUserQuestions)
-
         /// 获取关注我的
         userGroup.get(User.parameter, "fans", use: fetchFans)
         /// 我关注的
         userGroup.get(User.parameter, "following", use:  fetchFollowings)
+        /// 用户相关统计数据
+        userGroup.get(User.parameter, "statistics", use: fetchUserStatistics)
+
         /// 添加关注
-        tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
-        tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser);
+        tokenAuthGroup.post(Follower.self, at:"follow", use: followUser)
+        /// 取消关注
+        tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser)
+        /// 判断用户是否被自己关注
+        tokenAuthGroup.post(Follower.self, at:"isFollowing", use: isFollowing)
+
     }
 }
 
 
 extension UserRouteController {
+
+    func isFollowing(request: Request, container: Follower) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        return try Follower
+            .query(on: request)
+            .filter(\Follower.userId == container.userId)
+            .filter(\Follower.followedId == container.followedId)
+            .count()
+            .map { count in
+                return UserIsFollowing(isFollowing: count > 0)
+            }.makeJson(on: request)
+    }
+
+    func fetchUserStatistics(request: Request) throws -> Future<Response>  {
+        return try request.parameters.next(User.self).flatMap { user in
+            let fansCountF = try Follower
+                .query(on: request)
+                .filter(\Follower.followedId == user.requireID())
+                .count()
+            let follwingF = try Follower
+                .query(on: request).filter(\Follower.userId == user.requireID())
+                .count()
+            return try map(fansCountF, follwingF, { fansC, follC in
+                return UserStatistics(fansCount: fansC, followingCount: follC)
+            }).makeJson(on: request)
+        }
+    }
 
     func fetchUserQuestions(request: Request) throws -> Future<Response> {
         return try request.parameters.next(User.self).flatMap { user in
