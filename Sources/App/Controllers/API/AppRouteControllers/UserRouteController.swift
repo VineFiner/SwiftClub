@@ -31,38 +31,79 @@ final class UserRouteController: RouteCollection {
         // /oauth/token 通过小程序提供的验证信息获取服务器自己的 token
         group.post(UserWxAppOauthReqContainer.self, at: "/oauth/token", use: wxappOauthToken)
 
-
         //// 用户接口
         let guardAuthMiddleware = User.guardAuthMiddleware()
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
 
         let userGroup = router.grouped("api", "user")
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
+
         /// 用户信息
         userGroup.get(User.parameter, "info", use: fetchUserInfo)
+        /// 用户文章
+        userGroup.get(User.parameter, "topics", use: fetchUserTopics)
+        /// 用户问答
+        userGroup.get(User.parameter, "questions", use: fetchUserQuestions)
 
+        /// 获取关注我的
+        userGroup.get(User.parameter, "fans", use: fetchFans)
+        /// 我关注的
+        userGroup.get(User.parameter, "following", use:  fetchFollowings)
         /// 添加关注
         tokenAuthGroup.post(Follower.self, at:"follow", use: followUser);
         tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser);
-        /// 获取关注我的
-        tokenAuthGroup.get("fans", use: fetchFans)
-        /// 我关注的
-        tokenAuthGroup.get("follows", use:  fetchFollowings)
-
-        /// 我的评论
-        
-
-        /// 我的发布
-
-        /// 我的收藏
-        /// 我收藏的文章，我收藏的问题， 我收藏的回答
-
-
     }
 }
 
 
 extension UserRouteController {
+
+    func fetchUserQuestions(request: Request) throws -> Future<Response> {
+        return try request.parameters.next(User.self).flatMap { user in
+            return try Infomation
+                .query(on: request)
+                .filter(\Infomation.creatorId == user.requireID())
+                .sort(\Infomation.createdAt, PostgreSQLDirection.descending)
+                .range(request.pageRange)
+                .join(\User.id, to: \Infomation.creatorId)
+                .alsoDecode(User.self)
+                .all()
+                .map(to: [InformationResContainer].self, { infos in
+                    return infos.map { tuple in
+                        return InformationResContainer(info: tuple.0, creator: tuple.1)
+                    }
+                }).flatMap { results in
+                    return try Infomation
+                        .query(on: request)
+                        .filter(\Infomation.creatorId == user.requireID())
+                        .count()
+                        .map(to: Paginated<InformationResContainer>.self) { count in
+                            return request.paginated(data: results, total: count)
+                    }
+                }.makeJson(on:request)
+        }
+    }
+
+    func fetchUserTopics(request: Request) throws -> Future<Response> {
+        return try request.parameters.next(User.self).flatMap { user in
+            return try Topic
+                .query(on: request)
+                .filter(\Topic.userId == user.requireID())
+                .sort(\Topic.createdAt, .descending)
+                .range(request.pageRange) // 获取分页数据
+                .join(\User.id, to: \Topic.userId)
+                .alsoDecode(User.self)
+                .all()
+                .map { tuples in
+                    return tuples.map { tuple in  return TopicResContainer(topic: tuple.0, user: tuple.1)}
+                }.flatMap{ results in
+                    return try Topic.query(on: request).filter(\Topic.userId == user.requireID()).count().map(to: Paginated<TopicResContainer>.self) { count in
+                        return request.paginated(data: results, total: count)
+                    }
+                }
+                .makeJson(on:request)
+        }
+    }
 
     /// 获取用户信息
     func fetchUserInfo(request: Request) throws -> Future<Response> {
@@ -70,53 +111,54 @@ extension UserRouteController {
     }
 
     func fetchFans(_ request: Request) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        let userId = try request.query.get(Int.self, at: "userId")
-        return try Follower
-            .query(on: request)
-            .filter(\Follower.followedId == userId)
-            .range(request.pageRange)
-            .all()
-            .flatMap (to: [User].self,{ fans in
-                let futurs = fans.map { fan in
-                    return User
-                        .find(fan.userId, on: request)
-                        .unwrap(or: ApiError(code: .userNotExist))
-                }
-                return futurs.flatten(on: request)
-            }).flatMap { results in
-                return Follower.query(on: request)
-                    .filter(\Follower.followedId == userId)
-                    .count()
-                    .map(to: Paginated<User>.self) { count in
-                    return request.paginated(data: results, total: count)
-                }
-            }.makeJson(on: request)
+        return try request.parameters.next(User.self).flatMap{ user in
+            return try Follower
+                .query(on: request)
+                .filter(\Follower.followedId == user.requireID())
+                .range(request.pageRange)
+                .all()
+                .flatMap (to: [User].self,{ fans in
+                    let futurs = fans.map { fan in
+                        return User
+                            .find(fan.userId, on: request)
+                            .unwrap(or: ApiError(code: .userNotExist))
+                    }
+                    return futurs.flatten(on: request)
+                }).flatMap { results in
+                    return try Follower.query(on: request)
+                        .filter(\Follower.followedId == user.requireID())
+                        .count()
+                        .map(to: Paginated<User>.self) { count in
+                            return request.paginated(data: results, total: count)
+                    }
+                }.makeJson(on: request)
+        }
+
     }
 
     func fetchFollowings(_ request: Request) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        let userId = try request.query.get(Int.self, at: "userId")
-        return try Follower
-            .query(on: request)
-            .filter(\Follower.userId == userId)
-            .range(request.pageRange)
-            .all()
-            .flatMap (to: [User].self,{ fans in
-                let futurs = fans.map { fan in
-                    return User
-                        .find(fan.userId, on: request)
-                        .unwrap(or: ApiError(code: .userNotExist))
-                }
-                return futurs.flatten(on: request)
-            }).flatMap { results in
-                return Follower.query(on: request)
-                    .filter(\Follower.followedId == userId)
-                    .count()
-                    .map(to: Paginated<User>.self) { count in
-                        return request.paginated(data: results, total: count)
-                }
-            }.makeJson(on: request)
+        return try request.parameters.next(User.self).flatMap{ user in
+            return try Follower
+                .query(on: request)
+                .filter(\Follower.userId == user.requireID())
+                .range(request.pageRange)
+                .all()
+                .flatMap (to: [User].self,{ fans in
+                    let futurs = fans.map { fan in
+                        return User
+                            .find(fan.userId, on: request)
+                            .unwrap(or: ApiError(code: .userNotExist))
+                    }
+                    return futurs.flatten(on: request)
+                }).flatMap { results in
+                    return try Follower.query(on: request)
+                        .filter(\Follower.followedId == user.requireID())
+                        .count()
+                        .map(to: Paginated<User>.self) { count in
+                            return request.paginated(data: results, total: count)
+                    }
+                }.makeJson(on: request)
+        }
     }
 
     func unFollowUser(_ request: Request, container: Follower) throws -> Future<Response> {
