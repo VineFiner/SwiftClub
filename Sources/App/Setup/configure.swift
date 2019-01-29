@@ -1,6 +1,7 @@
 
 import Vapor
 import FluentPostgreSQL
+import VaporMonitoring
 /// Called before your application initializes.
 ///
 /// https://docs.vapor.codes/3.0/getting-started/structure/#configureswift
@@ -10,8 +11,8 @@ public func configure(
     _ services: inout Services
 ) throws {
 
-    services.register(Router.self) { container -> EngineRouter in
-        let router = EngineRouter.default()
+    let router = try VaporMonitoring.setupMonitoring(&config, &services)
+    services.register(Router.self) { container -> MonitoredRouter in
         try routes(router, container)
         return router
     }
