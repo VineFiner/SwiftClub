@@ -14,6 +14,7 @@ import Pagination
 final class UserRouteController: RouteCollection {
     private let authService = AuthenticationService()
     private let notifyService = NotifyService()
+
     func boot(router: Router) throws {
         let group = router.grouped("api", "users")
         group.post(EmailLoginReqContainer.self, at: "login", use: loginUserHandler)
@@ -50,7 +51,6 @@ final class UserRouteController: RouteCollection {
         userGroup.get(User.parameter, "following", use:  fetchFollowings)
         /// 用户相关统计数据
         userGroup.get(User.parameter, "statistics", use: fetchUserStatistics)
-
         /// 添加关注
         tokenAuthGroup.post(Follower.self, at:"follow", use: followUser)
         /// 取消关注
@@ -58,11 +58,20 @@ final class UserRouteController: RouteCollection {
         /// 判断用户是否被自己关注
         tokenAuthGroup.post(Follower.self, at:"isFollowing", use: isFollowing)
 
+        /// 获取用户关注的内容
+        tokenAuthGroup.get("focus", use: fetchUserFocus)
     }
 }
 
 
 extension UserRouteController {
+
+    /// 获取用户关注对象产生的事件列表, 每次用户进入页面需要进行 pull
+    func fetchUserFocus(request: Request) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try self.notifyService.getUserNotify(userId: userId, on: request)
+    }
 
     func isFollowing(request: Request, container: Follower) throws -> Future<Response> {
         let _ = try request.authenticated(User.self)
@@ -93,27 +102,36 @@ extension UserRouteController {
 
     func fetchUserQuestions(request: Request) throws -> Future<Response> {
         return try request.parameters.next(User.self).flatMap { user in
-            return try Infomation
+            return try Question
                 .query(on: request)
-                .filter(\Infomation.creatorId == user.requireID())
-                .sort(\Infomation.createdAt, PostgreSQLDirection.descending)
+                .filter(\Question.creatorId == user.requireID())
+                .sort(\Question.createdAt, PostgreSQLDirection.descending)
                 .range(request.pageRange)
-                .join(\User.id, to: \Infomation.creatorId)
-                .alsoDecode(User.self)
                 .all()
-                .map(to: [InformationResContainer].self, { infos in
-                    return infos.map { tuple in
-                        return InformationResContainer(info: tuple.0, creator: tuple.1)
+                .flatMap(to: [QuestionResContainer].self, { questions in
+                    let futures = questions.map { question in
+                        return User.find(question.creatorId, on: request)
+                            .unwrap(or: ApiError(code: .modelNotExist))
+                            .flatMap { user in
+                                return Comment.query(on: request)
+                                    .filter(\Comment.targetType == CommentType.question.rawValue)
+                                    .filter(\Comment.targetId == question.id!)
+                                    .count()
+                                    .map(to: QuestionResContainer.self, { count in
+                                        return QuestionResContainer(user: user, question: question, commentCount: count)
+                                    })
+                        }
                     }
+                    return futures.flatten(on: request)
                 }).flatMap { results in
-                    return try Infomation
+                    return try Question
                         .query(on: request)
-                        .filter(\Infomation.creatorId == user.requireID())
+                        .filter(\Question.creatorId == user.requireID())
                         .count()
-                        .map(to: Paginated<InformationResContainer>.self) { count in
+                        .map(to: Paginated<QuestionResContainer>.self) { count in
                             return request.paginated(data: results, total: count)
                     }
-                }.makeJson(on:request)
+                }.makeJson(on: request)
         }
     }
 

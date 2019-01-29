@@ -4,8 +4,6 @@
 //
 //  Created by laijihua on 2018/11/3.
 //
-
-import Foundation
 import Vapor
 import Crypto
 

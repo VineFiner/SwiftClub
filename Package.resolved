@@ -110,6 +110,24 @@
         }
       },
       {
+        "package": "Jobs",
+        "repositoryURL": "https://github.com/vapor-community/jobs.git",
+        "state": {
+          "branch": null,
+          "revision": "255e20421e83524ceec57edd1882f130ba6dc82c",
+          "version": "0.2.1"
+        }
+      },
+      {
+        "package": "JobsRedisDriver",
+        "repositoryURL": "https://github.com/vapor-community/jobs-redis-driver.git",
+        "state": {
+          "branch": null,
+          "revision": "607d74ad082aedbe29bdc594ff97460371b5cbe6",
+          "version": "0.2.0"
+        }
+      },
+      {
         "package": "LoggerAPI",
         "repositoryURL": "https://github.com/IBM-Swift/LoggerAPI.git",
         "state": {

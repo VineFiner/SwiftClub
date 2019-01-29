@@ -14,6 +14,16 @@ import Pagination
 
 
 extension NotifyService {
+
+    // 自己创建的文章|问答被评论
+    // 自己创建的文章|问答被收藏
+    // 自己被粉丝关注
+
+    // 关注的人发布文章|问答
+    // 关注的人对文章|问答进行评论
+    // 关注的人对文章|问答进行收藏
+
+
     enum TargetType: String {
         case user = "user"
         case question = "question"
@@ -44,13 +54,6 @@ extension NotifyService {
             }
         }
     }
-    // 自己创建的文章|问答被评论
-    // 自己创建的文章|问答被收藏
-    // 自己被粉丝关注
-
-    // 关注的人发布文章|问答
-    // 关注的人对文章|问答进行评论
-    // 关注的人对文章|问答进行收藏
 }
 
 final class NotifyService {
@@ -98,7 +101,10 @@ final class NotifyService {
                 }
              }
             .flatMap { results in
-                return UserNotify.query(on: reqeust).filter(\UserNotify.userId == userId).count().map(to: Paginated<NotifyResContainer>.self, { count in
+                return UserNotify.query(on: reqeust)
+                    .filter(\UserNotify.userId == userId)
+                    .count()
+                    .map(to: Paginated<NotifyResContainer>.self, { count in
                     return reqeust.paginated(data: results, total: count)
                 })
             }.makeJson(on: reqeust)
@@ -116,7 +122,7 @@ final class NotifyService {
             .map(to: Void.self, { _ in Void()})
     }
 
-    func createUserNotify(userId: User.ID, notifies: [Notify], on request: Request) throws -> Future<Void> {
+    func createUserNotify(userId: User.ID, notifies: [Notify], on request: DatabaseConnectable) throws -> Future<Void> {
         let futures = notifies.map { notify -> Future<Void> in
             let userNoti = UserNotify(userId: userId, notifyId: notify.id!, notifyType: notify.type)
             return userNoti.create(on: request).map(to: Void.self, {_ in })
@@ -128,28 +134,25 @@ final class NotifyService {
     /// 从UserNotify中获取最近的一条公告信息的创建时间
     /// 用lastTime作为过滤条件，查询Notify的公告信息
     /// 新建UserNotify并关联查询出来的公告信息
-    func pullAnnounce(userId: User.ID, on request: Request) throws -> Future<Response> {
+    func pullAnnounce(userId: User.ID, on request: Request) throws -> Future<Void> {
         return UserNotify
             .query(on: request)
             .filter(\.userId == userId)
             .filter(\UserNotify.notifyType == Notify.announce)
             .sort(\UserNotify.createdAt, .descending)
             .first()
+            .unwrap(or: ApiError(code: .modelNotExist))
             .flatMap { usernoti in
                 /// 获取到最后一条
-                guard let existUsernoti = usernoti,
-                    let lastTime = existUsernoti.createdAt else {
-                    return try request.makeJson()
-                }
-
-                return try Notify
+                let lastTime = usernoti.createdAt
+                return Notify
                     .query(on: request)
                     .filter(\.type == Notify.announce)
                     .filter(\.createdAt > lastTime)
                     .all()
                     .flatMap{ noties in
                        return try self.createUserNotify(userId: userId, notifies: noties, on: request)
-                    }.makeJson(request: request)
+                    }
         }
 
     }
@@ -159,8 +162,8 @@ final class NotifyService {
     /// 查询用户的配置文件SubscriptionConfig，如果没有则使用默认的配置DefaultSubscriptionConfig
     /// 使用订阅配置，过滤查询出来的Notify
     /// 使用过滤好的Notify作为关联新建UserNotify
-    func pullRemind(userId: User.ID, on request: Request) throws -> Future<Response> {
-        return try Subscription
+    func pullRemind(userId: User.ID, on request: DatabaseConnectable) throws -> Future<Void> {
+        return Subscription
             .query(on: request)
             .filter(\.userId == userId)
             .all()
@@ -181,7 +184,7 @@ final class NotifyService {
                     }
                 }
                 return Future<Void>.andAll(allFutures, eventLoop: request.eventLoop)
-            }.makeJson(request: request)
+            }
     }
 
 

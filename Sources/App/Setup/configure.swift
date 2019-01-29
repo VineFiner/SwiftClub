@@ -9,13 +9,14 @@ public func configure(
     _ env: inout Environment,
     _ services: inout Services
 ) throws {
-    print("环境\nrelease:\(env.isRelease)")
-    let router = EngineRouter.default()
-    try routes(router)
-    services.register(router, as: Router.self)
 
-    let serverConfig = NIOServerConfig.default(hostname: "0.0.0.0",
-                                               port: 8977)
+    services.register(Router.self) { container -> EngineRouter in
+        let router = EngineRouter.default()
+        try routes(router, container)
+        return router
+    }
+
+    let serverConfig = NIOServerConfig.default(hostname: "0.0.0.0", port: 8977)
     services.register(serverConfig)
 
     /// 配置全局的 middleware

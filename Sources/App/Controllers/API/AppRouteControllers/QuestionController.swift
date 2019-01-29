@@ -127,7 +127,10 @@ extension QuestionController {
     }
 
     func fetchQuestion(_ reqeust: Request) throws -> Future<Response> {
-        return try reqeust.parameters.next(Question.self).flatMap(to: QuestionResContainer.self, { question in
+        return try reqeust
+            .parameters
+            .next(Question.self)
+            .flatMap(to: QuestionResContainer.self, { question in
             return question.creator.query(on: reqeust)
                 .first()
                 .unwrap(or: ApiError(code: .modelExisted))

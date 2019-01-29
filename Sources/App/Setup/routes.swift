@@ -1,28 +1,11 @@
-import Routing
 import Vapor
-import Redis
+import Jobs
 
-
-public func routes(_ router: Router) throws {
+public func routes(_ router: Router, _ container: Container) throws {
 
     // / 用于静态文件
     router.get("welcome") { req in
         return "welcome"
-    }
-
-    router.get("senderEmail") { request in
-        return try EmailSender.sendEmail(request, content: .accountActive(emailTo: "1164258202@qq.com", url: "https://baidu.com")).transform(to: HTTPStatus.ok)
-    }
-
-    router.get("user") { request in
-        return try User.query(on: request).paginate(for: request).map{$0.response()}.makeJson(on: request)
-    }
-
-    router.get("redis") { request in
-        return request.withNewConnection(to: .redis, closure: { redis in
-            return redis.command("INFO")
-                .map { $0.string ?? "" }
-        })
     }
 
     let authRouteController = AuthenticationRouteController()
@@ -51,5 +34,9 @@ public func routes(_ router: Router) throws {
 
     let questionController = QuestionController()
     try router.register(collection: questionController)
+
+    let queue = try container.make(QueueService.self)
+    try router.register(collection: JobsController(queue: queue))
+
 }
 
