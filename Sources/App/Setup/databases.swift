@@ -36,7 +36,11 @@ public func databases(config: inout DatabasesConfig, services: inout Services,en
     let redisConfig = RedisClientConfig()
     let redisDatabase = try RedisDatabase(config: redisConfig)
     config.add(database: redisDatabase, as: .redis)
-    config.enableLogging(on: .psql)
+
+    /// 发布的时候去除控制台输出
+    if (!env.isRelease) {
+        config.enableLogging(on: .psql)
+    }
 
     /// 添加定时任务
     services.register(JobsPersistenceLayer.self) { container -> JobsRedisDriver in
