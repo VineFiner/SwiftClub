@@ -37,7 +37,7 @@ final class UserRouteController: RouteCollection {
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
 
         let userGroup = router.grouped("api", "user")
-        let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
+        let tokenAuthGroup = userGroup.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
         /// 用户信息
         userGroup.get(User.parameter, "info", use: fetchUserInfo)
@@ -59,6 +59,7 @@ final class UserRouteController: RouteCollection {
         tokenAuthGroup.post(Follower.self, at:"isFollowing", use: isFollowing)
 
         /// 获取用户关注的内容
+        //http://192.168.198.125:8977/api/user/focus?page=1&per=10&userId=1
         tokenAuthGroup.get("focus", use: fetchUserFocus)
     }
 }

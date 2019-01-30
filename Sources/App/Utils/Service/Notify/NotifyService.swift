@@ -92,15 +92,14 @@ final class NotifyService {
             .filter(\UserNotify.userId == userId)
             .sort(\UserNotify.createdAt)
             .range(reqeust.pageRange)
-            .join(\UserNotify.notifyId, to: \Notify.id)
-            .alsoDecode(Notify.self)
             .all()
-            .map { tupels in
-                return tupels.map {tuple in
-                    return NotifyResContainer(userNotify: tuple.0, notify: tuple.1)
-                }
-             }
-            .flatMap { results in
+            .flatMap (to: [NotifyResContainer].self, { usernotis in
+                return usernotis.map { usernoti in
+                    return Notify.find(usernoti.notifyId, on: reqeust).map { notify in
+                        return NotifyResContainer(userNotify: usernoti, notify: notify!)
+                    }
+                }.flatten(on: reqeust)
+            }).flatMap { results in
                 return UserNotify.query(on: reqeust)
                     .filter(\UserNotify.userId == userId)
                     .count()
