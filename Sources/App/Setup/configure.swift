@@ -11,8 +11,8 @@ public func configure(
     _ services: inout Services
 ) throws {
 
-    let router = EngineRouter.default()
     services.register(Router.self) { container -> EngineRouter in
+        let router = EngineRouter.default()
         try routes(router, container)
         return router
     }

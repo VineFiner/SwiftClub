@@ -122,11 +122,22 @@ final class NotifyService {
     }
 
     func createUserNotify(userId: User.ID, notifies: [Notify], on request: DatabaseConnectable) throws -> Future<Void> {
-        let futures = notifies.map { notify -> Future<Void> in
-            let userNoti = UserNotify(userId: userId, notifyId: notify.id!, notifyType: notify.type)
-            return userNoti.create(on: request).map(to: Void.self, {_ in })
-        }
-        return Future<Void>.andAll(futures, eventLoop: request.eventLoop)
+        return  UserNotify
+            .query(on: request)
+            .sort(\UserNotify.createdAt, .descending)
+            .first()
+            .flatMap { lastUNoti -> EventLoopFuture<Void> in
+                var finalNotis = notifies
+                if let unoti = lastUNoti {
+                    finalNotis = notifies.filter {($0.createdAt!) > (unoti.createdAt!)}
+                }
+                let futures = finalNotis.map { notify -> Future<Void> in
+                    let userNoti = UserNotify(userId: userId, notifyId: notify.id!, notifyType: notify.type)
+                    return userNoti.create(on: request).map(to: Void.self, {_ in })
+                }
+                return Future<Void>.andAll(futures, eventLoop: request.eventLoop)
+            }.transform(to: Void())
+
     }
 
 
@@ -171,10 +182,9 @@ final class NotifyService {
                 let noties = subs.compactMap { sub in
                     return Notify
                         .query(on: request)
-                        .filter(\Notify.type == sub.target)
-                        .filter(\Notify.targetType == sub.targetType)
+                        .filter(\Notify.senderId == sub.target)
                         .filter(\Notify.action == sub.action)
-                        .filter(\Notify.createdAt > sub.createdAt)
+                        .filter(\Notify.createdAt > sub.createdAt) /// 应该是大于UserNotify 的最后一条
                         .all()
                 }
                 let allFutures = noties.map { notifyF in

@@ -11,7 +11,7 @@ import FluentPostgreSQL
 // target: 123,  // 产品A的ID
 // targetType: 'product',
 // action: 'comment',
-// user: 123  // 小明的ID
+// userId: 123  // 小明的ID
 
 final class Subscription: Content {
     var id: Int?

@@ -61,11 +61,18 @@ final class UserRouteController: RouteCollection {
         /// 获取用户关注的内容
         //http://192.168.198.125:8977/api/user/focus?page=1&per=10&userId=1
         tokenAuthGroup.get("focus", use: fetchUserFocus)
+        tokenAuthGroup.get("focus", "pull", use: pullUserFocus)
     }
 }
 
 
 extension UserRouteController {
+
+    func pullUserFocus(request: Request) throws -> Future<Response> {
+        let _ = try request.authenticated(User.self)
+        let userId = try request.query.get(Int.self, at: "userId")
+        return try self.notifyService.pullRemind(userId: userId, on: request).makeJson(request:request)
+    }
 
     /// 获取用户关注对象产生的事件列表, 每次用户进入页面需要进行 pull
     func fetchUserFocus(request: Request) throws -> Future<Response> {
