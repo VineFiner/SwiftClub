@@ -4,7 +4,7 @@
 //
 //  Created by laijihua on 2019/1/29.
 //
-
+/*
 import Vapor
 import Jobs
 
@@ -25,4 +25,4 @@ extension JobsController {
         let job = NotifyPullJob(userId: 1)
         return queue.dispatch(job: job, maxRetryCount: 10).transform(to: .ok)
     }
-}
+}*/

@@ -5,6 +5,7 @@
 //  Created by laijihua on 2019/1/29.
 //
 
+/*
 import Foundation
 import Vapor
 import Jobs
@@ -81,3 +82,4 @@ extension JobContext {
         }
     }
 }
+*/

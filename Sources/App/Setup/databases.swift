@@ -9,8 +9,8 @@ import Vapor
 import FluentPostgreSQL
 import Authentication
 import Redis
-import Jobs
-import JobsRedisDriver
+//import Jobs
+//import JobsRedisDriver
 
 public func databases(config: inout DatabasesConfig, services: inout Services,env: inout Environment) throws {
 
@@ -42,10 +42,10 @@ public func databases(config: inout DatabasesConfig, services: inout Services,en
         config.enableLogging(on: .psql)
     }
 
-    /// 添加定时任务
-    services.register(JobsPersistenceLayer.self) { container -> JobsRedisDriver in
-        return JobsRedisDriver(database: redisDatabase, eventLoop: container.next())
-    }
-
-    try jobs(&services)
+//    /// 添加定时任务
+//    services.register(JobsPersistenceLayer.self) { container -> JobsRedisDriver in
+//        return JobsRedisDriver(database: redisDatabase, eventLoop: container.next())
+//    }
+//
+//    try jobs(&services)
 }

@@ -1,5 +1,5 @@
 import Vapor
-import Jobs
+//import Jobs
 
 public func routes(_ router: Router, _ container: Container) throws {
 
@@ -35,8 +35,8 @@ public func routes(_ router: Router, _ container: Container) throws {
     let questionController = QuestionController()
     try router.register(collection: questionController)
 
-    let queue = try container.make(QueueService.self)
-    try router.register(collection: JobsController(queue: queue))
+//    let queue = try container.make(QueueService.self)
+//    try router.register(collection: JobsController(queue: queue))
 
 }
 
