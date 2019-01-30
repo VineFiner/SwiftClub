@@ -12,7 +12,11 @@ public func configure(
 ) throws {
 
     let router = EngineRouter.default()
-    services.register(router, as: Router.self)
+    services.register(Router.self) { container -> EngineRouter in
+        try routes(router, container)
+        return router
+    }
+
 //    let router = try VaporMonitoring.setupMonitoring(&config, &services)
 //    services.register(Router.self) { container -> MonitoredRouter in
 //        try routes(router, container)
