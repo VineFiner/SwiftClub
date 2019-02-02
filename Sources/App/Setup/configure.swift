@@ -17,12 +17,6 @@ public func configure(
         return router
     }
 
-//    let router = try VaporMonitoring.setupMonitoring(&config, &services)
-//    services.register(Router.self) { container -> MonitoredRouter in
-//        try routes(router, container)
-//        return router
-//    }
-
     let serverConfig = NIOServerConfig.default(hostname: "0.0.0.0", port: 8977)
     services.register(serverConfig)
 

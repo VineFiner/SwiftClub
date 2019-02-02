@@ -1,7 +1,7 @@
 import Vapor
 //import Jobs
 
-public func routes(_ router: Router, _ container: Container) throws {
+public func routes(_ router:Router, _ container:Container) throws {
 
     // / 用于静态文件
     router.get("welcome") { req in
@@ -34,6 +34,9 @@ public func routes(_ router: Router, _ container: Container) throws {
 
     let questionController = QuestionController()
     try router.register(collection: questionController)
+
+    let miniController = MiniRouteController()
+    try router.register(collection: miniController)
 
 //    let queue = try container.make(QueueService.self)
 //    try router.register(collection: JobsController(queue: queue))
