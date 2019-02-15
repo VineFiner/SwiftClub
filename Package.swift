@@ -11,6 +11,7 @@ let package = Package(
         .package(url: "https://github.com/IBM-Swift/Swift-SMTP", .upToNextMinor(from: "5.1.0")),
         .package(url: "https://github.com/vapor/redis.git", from: "3.0.0"), // redis
         .package(url: "https://github.com/vapor-community/jobs-redis-driver.git", from: "0.2.0"), // job
+        .package(url: "https://github.com/vapor-community/leaf-markdown.git", .upToNextMajor(from: "2.0.0"))
 //        .package(url: "https://github.com/vapor-community/VaporMonitoring.git", from: "2.0.0") // ubantu 上使用有问题性能检测
         //.package(url: "https://github.com/OpenKitten/MongoKitten.git", from: "4.1.3") // mongodb
     ],
@@ -23,6 +24,7 @@ let package = Package(
             "FluentPostgreSQL",
             "Redis",
             "JobsRedisDriver",
+            "LeafMarkdown"
 //            "VaporMonitoring"
             //"MongoKitten"
         ]),

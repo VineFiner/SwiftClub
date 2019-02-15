@@ -10,6 +10,7 @@ import Vapor
 import Fluent
 import FluentPostgreSQL
 import Pagination
+import Leaf
 
 
 final class TopicRouteController: RouteCollection {
@@ -26,6 +27,8 @@ final class TopicRouteController: RouteCollection {
         group.get("list", use: topicList) // 获取话题列表
         group.get(Topic.parameter, use: topicFetch) // topic 详情
         group.get(Topic.parameter, "comments", use: topicComments)
+        /// 获取 html
+        group.get(Topic.parameter, "html", use: topicHtml)
 
         /// 收藏
         tokenAuthGroup.post(Collect.self, at:"collect", use: topicCollect)
@@ -35,11 +38,22 @@ final class TopicRouteController: RouteCollection {
         tokenAuthGroup.post(TopicCommentReqContainer.self, at:"comment", use: topicAddComment)
         tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
         tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
+
+
+
     }
 }
 
 
 extension TopicRouteController {
+
+    func topicHtml(request: Request) throws -> Future<View> {
+        return try request.parameters
+            .next(Topic.self)
+            .flatMap { tmp in
+                return try request.view().render("markdown", ["myMarkdown": tmp.content])
+        }
+    }
 
     func topicUncollect(request: Request, container: Collect) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
