@@ -9,38 +9,21 @@ public func routes(_ router:Router, _ container:Container) throws {
         return "welcome"
     }
 
+    let group = router.grouped("api")
     let authRouteController = AuthenticationRouteController()
-    try router.register(collection: authRouteController)
-
+    try group.register(collection: authRouteController)
+    
     let userRouteController = UserRouteController()
-    try router.register(collection: userRouteController)
-
-    let sysRouteController = SysRouteController()
-    try router.register(collection: sysRouteController)
+    try group.register(collection: userRouteController)
 
     let protectedRouteController = ProtectedRoutesController()
-    try router.register(collection: protectedRouteController)
+    try group.register(collection: protectedRouteController)
 
     let accountRouteController = AccountRouteController()
-    try router.register(collection: accountRouteController)
-
-    let newsRouteController = NewsRouteController()
-    try router.register(collection: newsRouteController)
+    try group.register(collection: accountRouteController)
 
     let topicRouteController = TopicRouteController()
-    try router.register(collection: topicRouteController)
-
-    let informationController = InformationController()
-    try router.register(collection: informationController)
-
-    let questionController = QuestionController()
-    try router.register(collection: questionController)
-
-    let miniController = MiniRouteController()
-    try router.register(collection: miniController)
-
-//    let queue = try container.make(QueueService.self)
-//    try router.register(collection: JobsController(queue: queue))
+    try group.register(collection: topicRouteController)
 
 }
 

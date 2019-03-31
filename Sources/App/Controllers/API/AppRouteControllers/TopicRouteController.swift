@@ -18,35 +18,31 @@ final class TopicRouteController: RouteCollection {
     let notifyService = NotifyService()
 
     func boot(router: Router) throws {
-        let group = router.grouped("api", "topic")
+        let group = router.grouped("topic")
         let guardAuthMiddleware = User.guardAuthMiddleware()
         let tokenAuthMiddleware = User.tokenAuthMiddleware()
         let tokenAuthGroup = group.grouped([tokenAuthMiddleware, guardAuthMiddleware])
 
+        // 添加
         group.get("subjects", use: subjectsList) // 获取板块
+        group.get("tags", use: tagsList) // tags
         group.get("list", use: topicList) // 获取话题列表
+
+        // 获取 html
         group.get(Topic.parameter, use: topicFetch) // topic 详情
-        group.get(Topic.parameter, "comments", use: topicComments)
-        /// 获取 html
         group.get(Topic.parameter, "html", use: topicHtml)
 
-        /// 收藏
-        tokenAuthGroup.post(Collect.self, at:"collect", use: topicCollect)
-        tokenAuthGroup.post(Collect.self, at:"uncollect", use: topicUncollect)
-
-        /// 评论
-        tokenAuthGroup.post(TopicCommentReqContainer.self, at:"comment", use: topicAddComment)
-        tokenAuthGroup.post(Replay.self, at: "comment", "replay", use: commentAddReplay)
-        tokenAuthGroup.post(Topic.self, at: "add", use: topicAdd)
-
-
-
+        // 添加文章
+        tokenAuthGroup.post(TopicReqContainer.self, at: "add", use: topicAdd)
+        // 板块添加
+        tokenAuthGroup.post(Subject.self, at: "subject", "add", use: topicSubjectAdd)
+        // 添加tag
+        tokenAuthGroup.post(TagReqContainer.self, at: "tag", "add", use: tagAdd)
     }
 }
 
 
 extension TopicRouteController {
-
     func topicHtml(request: Request) throws -> Future<View> {
         return try request.parameters
             .next(Topic.self)
@@ -55,110 +51,13 @@ extension TopicRouteController {
         }
     }
 
-    func topicUncollect(request: Request, container: Collect) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        return Collect.query(on: request)
-            .filter(\Collect.targetType == container.targetType)
-            .filter(\Collect.targetId == container.targetId)
-            .filter(\Collect.collectorId == container.collectorId)
-            .delete()
-            .flatMap { _ in
-                return try self.notifyService.cancelSubscription(userId: container.collectorId, target: container.targetId, targetType: .topic, on: request)
-            }
-    }
-
-    func topicCollect(request: Request, container: Collect) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        return try container
-            .create(on: request)
-            .flatMap { collect -> EventLoopFuture<Collect> in // 且被添加订阅
-                let futrz = try self.notifyService.subscribe(userId: collect.collectorId, target: collect.targetId, targetType: .topic , reason: .likeTopic, on: request)
-                let futera = try self.notifyService.createRemind(target: collect.targetId, targetType: .topic, action: .like, sender: collect.collectorId, content: collect.targetName, on: request)
-                return map(futrz, futera, { a, b in
-                    return collect
-                })
-            }.makeJson(on: request)
-    }
-
     // 添加评论回复
     func commentAddReplay(request: Request, replay: Replay) throws  -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self)
         return try replay.create(on: request).makeJson(on: request)
     }
 
-    // 添加评论
-    func topicAddComment(request: Request, container: TopicCommentReqContainer) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        let comment = Comment(targetId: container.topicId, userId: container.userId, content: container.content)
-        return comment
-            .create(on: request)
-            .flatMap { comment in
-
-                /// 如果是关注了博客就commented， 如果关注了用户就是 .comment
-                return try self.notifyService.createRemind(target: comment.targetId, targetType: .topic, action: .comment, sender: comment.userId, content: comment.content, on: request)
-            }
-    }
-
-    // 获取话题的评论数据， 不支持左连接
-    func topicComments(request: Request) throws -> Future<Response> {
-        return try request
-            .parameters
-            .next(Topic.self)
-            .flatMap { topic in
-                let topicId = try topic.requireID()
-                return try Comment
-                    .query(on: request)
-                    .filter(\Comment.targetType == CommentType.topic.rawValue)
-                    .filter(\Comment.targetId == topicId)
-                    .range(request.pageRange)
-                    .all()
-                    .flatMap(to: [CommentResContainer].self, { comments in
-                        let commentFetures = comments.map { comment in
-                            return User.find(comment.userId, on: request)
-                                .unwrap(or: ApiError.init(code: .modelExisted))
-                                .map { user in
-                                    return CommentResContainer(comment: comment, user: user)
-                                }
-                        }
-                        return commentFetures.flatten(on: request)
-                    })
-                    .flatMap { comments in
-                        return comments.map { comment in
-                            return self.fetchCommentContainer(on: request, comment: comment)
-                        }.flatten(on: request)
-                    }.flatMap { results in
-                        return Comment.query(on: request)
-                            .filter(\Comment.targetType == CommentType.topic.rawValue)
-                            .filter(\Comment.targetId == topicId)
-                            .count()
-                            .map(to: Paginated<FullCommentResContainer>.self) { count in
-                            return request.paginated(data: results, total: count)
-                        }
-                    }.makeJson(on:request)
-        }
-    }
-
-    func fetchCommentContainer(on request: Request, comment: CommentResContainer) -> Future<FullCommentResContainer> {
-        return Replay
-            .query(on: request)
-            .filter(\Replay.commentId == comment.id!)
-            .all()
-            .flatMap { replays in
-                return replays.map { replay in
-                    return map(User.find(replay.userId, on: request), User.find(replay.toUid, on: request), { user, toUser in
-                        return CommentReplayResContainer(replay: replay, user:user!, toUser: toUser!)
-                    })
-                }.flatten(on: request)
-            }.map { results in
-                return FullCommentResContainer(comment: comment, replays: results)
-            }
-    }
-
-    /// 获取主题列表
-    func subjectsList(request: Request) throws -> Future<Response> {
-        return try Subject.query(on: request).all().makeJson(on: request)
-    }
-
+    // MARK: - Detail
     /// 获取话题
     func topicFetch(request: Request) throws -> Future<Response> {
         return try request.parameters.next(Topic.self).flatMap(to: TopicResContainer.self) { topic in
@@ -168,11 +67,20 @@ extension TopicRouteController {
                 .first()
                 .unwrap(or: ApiError(code: .modelNotExist))
                 .map(to: TopicResContainer.self) { user in
-                return TopicResContainer(topic: topic, user: user)
+                    return TopicResContainer(topic: topic, user: user)
             }
-        }.makeJson(on:request)
+            }.makeJson(on:request)
     }
 
+    // MARK: - List
+    func tagsList(request: Request) throws -> Future<Response> {
+        return try Tag.query(on: request).all().makeJson(on: request)
+    }
+
+    /// 获取主题列表
+    func subjectsList(request: Request) throws -> Future<Response> {
+        return try Subject.query(on: request).all().makeJson(on: request)
+    }
 
     func topicList(request: Request) throws -> Future<Response> {
         let subjectId = try request.query.get(Int?.self, at: "subjectId")
@@ -212,14 +120,39 @@ extension TopicRouteController {
         }
     }
 
-    func topicAdd(request: Request, container: Topic) throws -> Future<Response> {
+    // MARK: - ADD
+    func tagAdd(request: Request, container: TagReqContainer) throws -> Future<Response> {
         let _ = try request.requireAuthenticated(User.self) // 获取到当前用户
-        return container
+        let tag = Tag(name: container.name, remarks: container.remarks)
+        return try tag.create(on: request).makeJson(on: request)
+    }
+
+    func topicAdd(request: Request, container: TopicReqContainer) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self) // 获取到当前用户
+        let topic = Topic(title: container.title,
+                          subjectId: container.subjectId,
+                          userId: container.userId,
+                          content: container.content,
+                          textType: Topic.TextType(type: container.textType))
+        return topic
             .create(on: request)
             .flatMap { topic in
-                /// xxx发布了 这个 xxx topic，标题是 xxx
-                return try self.notifyService.createRemind(target: topic.id!, targetType: .topic, action: .post, sender: topic.userId, content: topic.title, on: request)
+                let topicId = topic.id!
+                return container.tags
+                    .map { tagId in
+                        return TopicTag(tagId: tagId, topicId: topicId).save(on: request)
+                    }
+                    .flatten(on: request)
+                    .flatMap { tags in
+                    /// xxx发布了 这个 xxx topic，标题是 xxx
+                    return try self.notifyService.createRemind(target: topic.id!, targetType: .topic, action: .post, sender: topic.userId, content: topic.title, on: request)
+                }
             }
+    }
+
+    func topicSubjectAdd(request: Request, container: Subject) throws -> Future<Response> {
+        let _ = try request.requireAuthenticated(User.self)
+        return try container.create(on: request).makeJson(on: request)
     }
 }
 

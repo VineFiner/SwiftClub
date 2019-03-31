@@ -9,19 +9,10 @@ import Vapor
 import FluentPostgreSQL //use your database driver here
 
 public func migrate(migrations: inout MigrationConfig) throws {
-    migrations.add(model: Organization.self, database: .psql)
+
     migrations.add(model: User.self, database: .psql)
-    migrations.add(model: Menu.self, database: .psql)
-    migrations.add(model: Role.self, database: .psql)
     migrations.add(model: OpLog.self, database: .psql)
-    migrations.add(model: Right.self, database: .psql)
-    migrations.add(model: Group.self, database: .psql)
-    migrations.add(model: RoleRight.self, database: .psql)
-    migrations.add(model: GroupRight.self, database: .psql)
-    migrations.add(model: GroupRole.self, database: .psql)
-    migrations.add(model: UserRight.self, database: .psql)
-    migrations.add(model: UserRole.self, database: .psql)
-    migrations.add(model: UserGroup.self, database: .psql)
+
     migrations.add(model: AccessToken.self, database: .psql)
     migrations.add(model: RefreshToken.self, database: .psql)
     migrations.add(model: ActiveCode.self, database: .psql)
@@ -29,10 +20,7 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: UserNotify.self, database: .psql)
     migrations.add(model: Subscription.self, database: .psql)
     migrations.add(model: UserAuth.self, database: .psql)
-
-    /// user
-    migrations.add(model: Follower.self, database: .psql)
-
+    migrations.add(model: Relation.self, database: .psql)
     /// ENUM
     /// Club
     migrations.add(model: Subject.self, database: .psql)
@@ -41,14 +29,6 @@ public func migrate(migrations: inout MigrationConfig) throws {
     migrations.add(model: Replay.self, database: .psql)
     migrations.add(model: Tag.self, database: .psql)
     migrations.add(model: TopicTag.self , database: .psql)
-    migrations.add(model: Infomation.self, database: .psql)
-    migrations.add(model: Question.self, database: .psql)
-    migrations.add(model: Collect.self, database: .psql)
-    migrations.add(model: Visit.self, database: .psql)
-    // Populate 预填充
-    migrations.add(migration: PopulateOrganizationForms.self, database: .psql)
-    migrations.add(migration: PopulateMenuForms.self, database: .psql)
-    migrations.add(migration: PopulateSubjectForms.self, database: .psql)
+    // Populate 预填
     // 添加字段, 如果你是最新的项目，那么下面的进行注释
-    //migrations.add(migration: SubjectAddIcon.self, database: .psql)
 }

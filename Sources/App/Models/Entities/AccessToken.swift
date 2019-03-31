@@ -10,7 +10,6 @@ import FluentPostgreSQL
 import Crypto
 import Authentication
 
-
 struct AccessToken: Content {
     struct Const {
         static let expirationInterval: TimeInterval = 3600 * 10

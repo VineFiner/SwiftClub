@@ -26,6 +26,11 @@ struct TopicTag: PostgreSQLPivot {
     static var createdAtKey: TimestampKey? { return \.createdAt }
     static var updatedAtKey: TimestampKey? { return \.updatedAt }
     static var deletedAtKey: TimestampKey? { return \.deletedAt }
+
+    init(tagId: Tag.ID, topicId: Topic.ID) {
+        self.tagId = tagId
+        self.topicId = topicId
+    }
 }
 
 extension TopicTag: Migration {

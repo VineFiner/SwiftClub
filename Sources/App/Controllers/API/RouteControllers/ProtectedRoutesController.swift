@@ -10,7 +10,7 @@ import Authentication
 
 final class ProtectedRoutesController: RouteCollection {
     func boot(router: Router) throws {
-        let group = router.grouped("api", "protected")
+        let group = router.grouped("protected")
 
         let basicAuthMiddleware = UserAuth.basicAuthMiddleware(using: BCrypt)
         let guardAuthMiddleware = UserAuth.guardAuthMiddleware()

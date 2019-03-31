@@ -18,11 +18,12 @@ public func databases(config: inout DatabasesConfig, services: inout Services,en
     try services.register(AuthenticationProvider())
     try services.register(RedisProvider())
 
+    /// macos 设置了 trust， 所以不用密码也可以
     var psqlConfig = PostgreSQLDatabaseConfig(hostname: "127.0.0.1",
                                               port: 5432,
                                               username: "root",
                                               database: "club",
-                                              password: "lai12345")
+                                              password: nil)
 
     if (env.isRelease) { /// 发布环境
         psqlConfig = PostgreSQLDatabaseConfig(hostname: "localhost",

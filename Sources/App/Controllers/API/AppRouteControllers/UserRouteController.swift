@@ -16,7 +16,7 @@ final class UserRouteController: RouteCollection {
     private let notifyService = NotifyService()
 
     func boot(router: Router) throws {
-        let group = router.grouped("api", "users")
+        let group = router.grouped("users")
         group.post(EmailLoginReqContainer.self, at: "login", use: loginUserHandler)
         group.post(UserRegisterReqContainer.self, at: "register", use: registerUserHandler)
         /// 修改密码 
@@ -44,22 +44,8 @@ final class UserRouteController: RouteCollection {
         /// 用户文章
         userGroup.get(User.parameter, "topics", use: fetchUserTopics)
         /// 用户问答
-        userGroup.get(User.parameter, "questions", use: fetchUserQuestions)
-        /// 获取关注我的
-        userGroup.get(User.parameter, "fans", use: fetchFans)
-        /// 我关注的
-        userGroup.get(User.parameter, "following", use:  fetchFollowings)
-        /// 用户相关统计数据
-        userGroup.get(User.parameter, "statistics", use: fetchUserStatistics)
-        /// 添加关注
-        tokenAuthGroup.post(Follower.self, at:"follow", use: followUser)
-        /// 取消关注
-        tokenAuthGroup.post(Follower.self, at:"unfollow", use: unFollowUser)
-        /// 判断用户是否被自己关注
-        tokenAuthGroup.post(Follower.self, at:"isFollowing", use: isFollowing)
-
+        
         /// 获取用户关注的内容
-        //http://192.168.198.125:8977/api/user/focus?page=1&per=10&userId=1
         tokenAuthGroup.get("focus", use: fetchUserFocus)
         tokenAuthGroup.get("focus", "pull", use: pullUserFocus)
     }
@@ -81,67 +67,6 @@ extension UserRouteController {
         return try self.notifyService.getUserNotify(userId: userId, on: request)
     }
 
-    func isFollowing(request: Request, container: Follower) throws -> Future<Response> {
-        let _ = try request.authenticated(User.self)
-        return try Follower
-            .query(on: request)
-            .filter(\Follower.userId == container.userId)
-            .filter(\Follower.followedId == container.followedId)
-            .count()
-            .map { count in
-                return UserIsFollowing(isFollowing: count > 0)
-            }.makeJson(on: request)
-    }
-
-    func fetchUserStatistics(request: Request) throws -> Future<Response>  {
-        return try request.parameters.next(User.self).flatMap { user in
-            let fansCountF = try Follower
-                .query(on: request)
-                .filter(\Follower.followedId == user.requireID())
-                .count()
-            let follwingF = try Follower
-                .query(on: request).filter(\Follower.userId == user.requireID())
-                .count()
-            return try map(fansCountF, follwingF, { fansC, follC in
-                return UserStatistics(fansCount: fansC, followingCount: follC)
-            }).makeJson(on: request)
-        }
-    }
-
-    func fetchUserQuestions(request: Request) throws -> Future<Response> {
-        return try request.parameters.next(User.self).flatMap { user in
-            return try Question
-                .query(on: request)
-                .filter(\Question.creatorId == user.requireID())
-                .sort(\Question.createdAt, PostgreSQLDirection.descending)
-                .range(request.pageRange)
-                .all()
-                .flatMap(to: [QuestionResContainer].self, { questions in
-                    let futures = questions.map { question in
-                        return User.find(question.creatorId, on: request)
-                            .unwrap(or: ApiError(code: .modelNotExist))
-                            .flatMap { user in
-                                return Comment.query(on: request)
-                                    .filter(\Comment.targetType == CommentType.question.rawValue)
-                                    .filter(\Comment.targetId == question.id!)
-                                    .count()
-                                    .map(to: QuestionResContainer.self, { count in
-                                        return QuestionResContainer(user: user, question: question, commentCount: count)
-                                    })
-                        }
-                    }
-                    return futures.flatten(on: request)
-                }).flatMap { results in
-                    return try Question
-                        .query(on: request)
-                        .filter(\Question.creatorId == user.requireID())
-                        .count()
-                        .map(to: Paginated<QuestionResContainer>.self) { count in
-                            return request.paginated(data: results, total: count)
-                    }
-                }.makeJson(on: request)
-        }
-    }
 
     func fetchUserTopics(request: Request) throws -> Future<Response> {
         return try request.parameters.next(User.self).flatMap { user in
@@ -168,94 +93,6 @@ extension UserRouteController {
     func fetchUserInfo(request: Request) throws -> Future<Response> {
         return try request.parameters.next(User.self).makeJson(on: request)
     }
-
-    func fetchFans(_ request: Request) throws -> Future<Response> {
-        return try request.parameters.next(User.self).flatMap{ user in
-            return try Follower
-                .query(on: request)
-                .filter(\Follower.followedId == user.requireID())
-                .range(request.pageRange)
-                .all()
-                .flatMap (to: [User].self,{ fans in
-                    let futurs = fans.map { fan in
-                        return User
-                            .find(fan.userId, on: request)
-                            .unwrap(or: ApiError(code: .userNotExist))
-                    }
-                    return futurs.flatten(on: request)
-                }).flatMap { results in
-                    return try Follower.query(on: request)
-                        .filter(\Follower.followedId == user.requireID())
-                        .count()
-                        .map(to: Paginated<User>.self) { count in
-                            return request.paginated(data: results, total: count)
-                    }
-                }.makeJson(on: request)
-        }
-
-    }
-
-    func fetchFollowings(_ request: Request) throws -> Future<Response> {
-        return try request.parameters.next(User.self).flatMap{ user in
-            return try Follower
-                .query(on: request)
-                .filter(\Follower.userId == user.requireID())
-                .range(request.pageRange)
-                .all()
-                .flatMap (to: [User].self,{ fans in
-                    let futurs = fans.map { fan in
-                        return User
-                            .find(fan.userId, on: request)
-                            .unwrap(or: ApiError(code: .userNotExist))
-                    }
-                    return futurs.flatten(on: request)
-                }).flatMap { results in
-                    return try Follower.query(on: request)
-                        .filter(\Follower.followedId == user.requireID())
-                        .count()
-                        .map(to: Paginated<User>.self) { count in
-                            return request.paginated(data: results, total: count)
-                    }
-                }.makeJson(on: request)
-        }
-    }
-
-    func unFollowUser(_ request: Request, container: Follower) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        return Follower.query(on: request)
-            .filter(\Follower.userId == container.userId)
-            .filter(\Follower.followedId == container.followedId)
-            .delete()
-            .flatMap {
-                return try self.notifyService.cancelSubscription(userId: container.userId, target: container.followedId, targetType: NotifyService.TargetType.user, on: request)
-            }
-    }
-    //
-    func followUser(_ request: Request, container: Follower) throws -> Future<Response> {
-        let _ = try request.requireAuthenticated(User.self)
-        return Follower.query(on: request)
-            .filter(\Follower.userId == container.userId)
-            .filter(\Follower.followedId == container.followedId)
-            .count()
-            .flatMap { count in
-                if (count > 0) { // 已关注
-                    throw ApiError(code: .custom)
-                }else {
-                    return try container
-                        .create(on: request)
-                        .flatMap { follwer -> EventLoopFuture<Follower> in
-                            let futa = try self.notifyService
-                                .subscribe(userId: follwer.userId, target: follwer.followedId, targetType: .user, reason: .likeUser, on: request)
-                            let futb = try self.notifyService.createRemind(target: follwer.followedId, targetType: .user, action: .like, sender: follwer.userId, content: "关注", on:  request)
-
-                            return map(futa, futb, { a, b in
-                                return follwer
-                            })
-                        }.makeJson(on: request)
-                }
-            }
-    }
-
 }
 
 //MARK: Helper
@@ -437,8 +274,7 @@ private extension UserRouteController {
                 var userAuth = UserAuth(userId: nil, identityType: .email, identifier: container.email, credential: container.password)
                 try userAuth.validate()
                 let newUser = User(name: container.name,
-                                   email: container.email,
-                                   organizId: container.organizId ?? 1)
+                                   email: container.email)
                 return newUser
                     .create(on: request)
                     .flatMap { user in

@@ -18,7 +18,7 @@ final class AuthenticationRouteController: RouteCollection {
     private let authService = AuthenticationService()
 
     func boot(router: Router) throws {
-        let group = router.grouped("api", "token")
+        let group = router.grouped("token")
         group.post(RefreshTokenReqContainer.self, at: "refresh", use: refreshAccessTokenHandler)
         let basicAuthMiddleware = UserAuth.basicAuthMiddleware(using: BCrypt)
         let guardAuthMiddleware = User.guardAuthMiddleware()

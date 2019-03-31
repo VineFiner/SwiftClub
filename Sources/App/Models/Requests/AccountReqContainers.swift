@@ -14,7 +14,6 @@ struct UserWxAppOauthReqContainer: Content {
 }
 
 struct UserUpdateReqContainer: Content {
-    var organizId: Organization.ID?
     var phone: String?
     var name: String?
     var avator: String?
@@ -25,7 +24,6 @@ struct UserRegisterReqContainer: Content {
     let email: String
     let password: String
     let name: String
-    let organizId: Organization.ID?
 }
 
 struct UserEmailReqContainer: Content {
