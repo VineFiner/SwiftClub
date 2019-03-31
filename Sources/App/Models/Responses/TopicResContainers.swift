@@ -10,13 +10,9 @@ import Vapor
 struct TopicResContainer: Content {
     var user: User
     var topic: Topic
-    var commentCount: Int
-    var collectCount: Int
-    init(topic: Topic, user: User, commentCount: Int = 0, collectCount: Int = 0) {
+    init(topic: Topic, user: User) {
         self.topic = topic
         self.user = user
-        self.collectCount = 0
-        self.commentCount = 0
     }
 }
 

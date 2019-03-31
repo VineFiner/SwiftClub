@@ -96,7 +96,10 @@ extension TopicRouteController {
                 .map { tuples in
                     return tuples.map { tuple in  return TopicResContainer(topic: tuple.0, user: tuple.1)}
                 }.flatMap{ results in
-                    return Topic.query(on: request).filter(\Topic.subjectId == subjectId).count().map(to: Paginated<TopicResContainer>.self) { count in
+                    return Topic.query(on: request)
+                        .filter(\Topic.subjectId == subjectId)
+                        .count()
+                        .map(to: Paginated<TopicResContainer>.self) { count in
                         return request.paginated(data: results, total: count)
                     }
                 }
