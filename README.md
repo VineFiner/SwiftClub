@@ -21,7 +21,7 @@
 
 ## vapor
 
-Vapor3 + postgresql 
+Vapor3 + postgresql10.5
 
 ## 网站网址： 
 
