@@ -84,7 +84,7 @@ extension TopicRouteController {
 
     func topicList(request: Request) throws -> Future<Response> {
         let subjectId = try request.query.get(Int?.self, at: "subjectId")
-        if let subjectId = subjectId, subjectId > 1 {  // 1 是全部
+        if let subjectId = subjectId {  //
             return try Topic
                 .query(on: request)
                 .filter(\Topic.subjectId == subjectId)
