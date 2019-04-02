@@ -30,3 +30,9 @@ https://swiftclub.loveli.site
 ## 项目博文
 
 [项目系列博文](https://xiaozhuanlan.com/topic/7869023451)
+
+## 微信订阅号
+
+请搜索 SwiftClub
+
+
