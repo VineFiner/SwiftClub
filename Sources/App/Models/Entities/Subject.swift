@@ -14,7 +14,9 @@ struct Subject: Content {
     var name: String
     var remarks: String? // 描述
     var icon: String? // 图标
-    
+    var topicNum: Int // 文章数量
+    var focusNum: Int // 关注数
+
     var createdAt: Date?
     static var createdAtKey: TimestampKey? { return \.createdAt }
 
@@ -22,6 +24,8 @@ struct Subject: Content {
         self.name = name
         self.remarks = remarks
         self.icon = icon
+        self.topicNum = 0
+        self.focusNum = 0
     }
 }
 

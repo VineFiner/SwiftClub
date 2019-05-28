@@ -32,6 +32,9 @@ final class TopicRouteController: RouteCollection {
         group.get(Topic.parameter, use: topicFetch) // topic 详情
         group.get(Topic.parameter, "html", use: topicHtml)
 
+        // 获取热门话题
+        group.get("subjects/hot", use: listSubjectsHot)
+
         // 添加文章
         tokenAuthGroup.post(TopicReqContainer.self, at: "add", use: topicAdd)
         // 板块添加
@@ -43,6 +46,17 @@ final class TopicRouteController: RouteCollection {
 
 
 extension TopicRouteController {
+    func listSubjectsHot(request: Request) throws -> Future<Response> {
+        /// 获取到某个subject 下的文章数量
+        return try Subject
+            .query(on: request)
+            .sort(\Subject.topicNum, .descending)
+            .range(request.pageRange)
+            .all()
+            .makeJson(on: request)
+    }
+
+
     func topicHtml(request: Request) throws -> Future<View> {
         return try request.parameters
             .next(Topic.self)
