@@ -16,7 +16,7 @@ extension Request {
         guard let aPer = try? query.get(Int?.self, at: Pagination.defaultPerPageKey) else {
             return 10
         }
-        return aPer ?? 10
+        return aPer
     }
 
     // 页码
@@ -24,7 +24,7 @@ extension Request {
         guard let aPage = try? query.get(Int?.self, at: Pagination.defaultPageKey) else {
             return 1
         }
-        return aPage ?? 1
+        return aPage 
     }
 
     ///

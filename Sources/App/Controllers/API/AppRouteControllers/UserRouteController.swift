@@ -116,7 +116,10 @@ private extension UserRouteController {
             let encryptedData = try container.encryptedData.base64decode()
             let iv = try container.iv.base64decode()
 
-            let cipherAlgorithm = CipherAlgorithm(c: OpaquePointer(EVP_aes_128_cbc()))
+            guard let cbc = EVP_aes_128_cbc(), let evp_aes_128_cbc = OpaquePointer(UnsafePointer(cbc)) else {
+                throw ApiError(code:.custom)
+            }
+            let cipherAlgorithm = CipherAlgorithm(c: evp_aes_128_cbc)
             let shiper = Cipher(algorithm: cipherAlgorithm)
 
             let decrypted = try shiper.decrypt(encryptedData, key: sessionKey, iv: iv)

@@ -19,9 +19,23 @@
     </a>
 </p>
 
+
 ## vapor
 
 Vapor3 + postgresql10.5
+
+
+##  docker 部署
+
+隔离本地环境，建议采用 docker,  项目已写好相关脚本。
+部署:
+
+1. 安装 docker ， 并且运行
+2. 切到该工程根目录执行
+
+    ```sh
+    docker-compose up    
+    ```
 
 ## 网站网址： 
 

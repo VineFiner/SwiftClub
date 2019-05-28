@@ -1,0 +1,64 @@
+
+version:  "3"
+
+networks: 
+  db_nw:
+    driver: bridge
+  api_nw:
+    driver: bridge
+
+services: 
+  api: 
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: vapor-composer
+    environment: 
+      SLEEP_LENGTH: 5
+      POSTGRES_HOST: db
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: lai12345
+      POSTGRES_DB: club
+      REDIS_HOST: redis
+    ports: 
+      - "8080:8977"
+    depends_on: 
+      - "db"
+      - "redis"
+    networks: 
+      - db_nw
+      - api_nw
+      
+  db:
+    image: postgres 
+    restart: always
+    environment: 
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: lai12345
+      POSTGRES_DB: club
+    networks: 
+      - db_nw
+
+  redis:
+    image: redis:alpine
+    networks: 
+      - db_nw
+
+  nginx:
+    image: nginx:latest
+    volumes: 
+      - ./conf.d:/etc/nginx/conf.d
+    ports: 
+      - 80:80
+      - 443:443
+    depends_on: 
+      - "api"
+    networks: 
+      - api_nw
+
+      
+
+
+    
+
+
